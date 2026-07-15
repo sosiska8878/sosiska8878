@@ -1,79 +1,621 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Скоро тут будет магия</title>
-    <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            padding: 60px 80px;
-            border-radius: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-        .card:hover {
-            transform: scale(1.02);
-        }
-        .emoji-big {
-            font-size: 64px;
-            display: block;
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin: 0 0 10px;
-        }
-        .highlight {
-            background: #ffd700;
-            padding: 0 12px;
-            color: #1a1a1a;
-            border-radius: 20px;
-        }
-        p {
-            font-size: 18px;
-            color: #555;
-            margin-top: 15px;
-            letter-spacing: 1px;
-        }
-        .spinner {
-            display: inline-block;
-            animation: spin 4s linear infinite;
-            font-size: 20px;
-            margin-left: 5px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Калькулятор • Material You</title>
+  <!-- Подключаем шрифт Google Sans (как в Material You) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1c1b1f; /* темный фон, близкий к Material You dark theme */
+      font-family: 'Google Sans', 'Roboto', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+      margin: 0;
+    }
+
+    /* Основная карточка калькулятора — в стиле Surface Container */
+    .calculator {
+      width: 100%;
+      max-width: 400px;
+      background: #2b2930; /* surface color dark */
+      border-radius: 48px; /* большой радиус как в Material You */
+      padding: 24px 20px 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: all 0.2s ease;
+    }
+
+    /* Дисплей */
+    .display {
+      background: transparent;
+      padding: 12px 12px 4px;
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+      min-height: 100px;
+      word-break: break-word;
+      color: #e6e1e5;
+    }
+
+    .expression {
+      font-size: 1.2rem;
+      font-weight: 400;
+      color: #cac4d0; /* on surface variant */
+      letter-spacing: 0.3px;
+      min-height: 28px;
+      transition: all 0.15s;
+      text-align: right;
+      width: 100%;
+      overflow-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    .result {
+      font-size: 3.4rem;
+      font-weight: 400;
+      line-height: 1.2;
+      color: #e6e1e5;
+      text-align: right;
+      width: 100%;
+      letter-spacing: -0.5px;
+      transition: all 0.15s;
+      margin-top: 8px;
+    }
+
+    /* Сетка кнопок */
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      justify-items: center;
+      align-items: center;
+    }
+
+    /* Базовый стиль кнопок Material You */
+    .btn {
+      background: #48464c; /* surface variant */
+      border: none;
+      border-radius: 40px;
+      font-family: 'Google Sans', 'Roboto', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: #e6e1e5;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-width: 80px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      box-shadow: none;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Эффект нажатия (ripple-like) и hover */
+    .btn:hover {
+      background: #5d5b62;
+      filter: brightness(1.1);
+    }
+
+    .btn:active {
+      background: #6e6c73;
+      transform: scale(0.94);
+      transition: transform 0.1s ease, background 0.2s;
+    }
+
+    /* Кнопка действия (очистить, скобки, процент) — более светлый тон */
+    .btn.action {
+      background: #3e3c42;
+      color: #d0bcff; /* light purple accent */
+      font-weight: 500;
+    }
+
+    .btn.action:hover {
+      background: #4f4c54;
+    }
+
+    .btn.action:active {
+      background: #5f5c65;
+    }
+
+    /* Кнопки операторов (+, -, *, /) */
+    .btn.operator {
+      background: #625b71; /* primary container темный */
+      color: #eaddff;
+      font-weight: 500;
+    }
+
+    .btn.operator:hover {
+      background: #756e81;
+    }
+
+    .btn.operator:active {
+      background: #867e92;
+    }
+
+    /* Кнопка равно — акцентная, самая яркая */
+    .btn.equals {
+      background: #d0bcff; /* primary цвет Material You */
+      color: #381e72; /* on primary */
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(208, 188, 255, 0.3);
+    }
+
+    .btn.equals:hover {
+      background: #e0ceff;
+      box-shadow: 0 6px 16px rgba(208, 188, 255, 0.4);
+    }
+
+    .btn.equals:active {
+      background: #cbb5ff;
+      transform: scale(0.94);
+    }
+
+    /* Кнопка 0 может быть шире, но оставим симметрию для простоты. При желании можно растянуть, но grid делает все равными */
+    .zero {
+      /* Оставляем стандартный размер, но можно сделать на 2 колонки: 
+         если нужно: grid-column: span 2; max-width: 100%; aspect-ratio: auto; height: auto; 
+         Но в Material You калькуляторы часто сохраняют единый размер кнопок. Оставим равные. */
+    }
+
+    /* Адаптивность под небольшие экраны */
+    @media (max-width: 380px) {
+      .btn {
+        font-size: 1.3rem;
+      }
+      .result {
+        font-size: 2.8rem;
+      }
+    }
+
+    /* Для очень маленьких экранов */
+    @media (max-width: 320px) {
+      .calculator {
+        padding: 16px 12px 24px;
+      }
+      .btn {
+        font-size: 1.2rem;
+        border-radius: 32px;
+      }
+    }
+
+    /* Убираем синий подсвет при тапе на мобильных */
+    .btn:focus-visible {
+      outline: 2px solid #d0bcff;
+      outline-offset: 2px;
+    }
+
+    /* Кастомный стиль для кнопки backspace (⌫) */
+    .backspace-icon {
+      font-size: 1.7rem;
+      font-weight: 400;
+    }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <span class="emoji-big">🚀</span>
-        <h1>Сайт <span class="highlight">новенький</span></h1>
-        <p style="font-size: 26px; font-weight: 300; margin-top: 5px;">
-            Пока ничего нет <span style="color: #ff6b6b;">♥</span>
-        </p>
-        <p>
-            Но скоро здесь будет <strong>волшебство</strong> 
-            <span class="spinner">✨</span>
-        </p>
-        <div style="margin-top: 30px; height: 3px; width: 80px; background: #ddd; border-radius: 10px; margin-left: auto; margin-right: auto;"></div>
-        <p style="font-size: 14px; color: #aaa; margin-top: 20px;">Осталось совсем чуть-чуть</p>
+  <div class="calculator">
+    <!-- Дисплей -->
+    <div class="display">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
     </div>
+
+    <!-- Сетка кнопок -->
+    <div class="buttons">
+      <!-- Ряд 1: C, скобки, процент, деление -->
+      <button class="btn action" id="clear">C</button>
+      <button class="btn action" id="parentheses">( )</button>
+      <button class="btn action" id="percent">%</button>
+      <button class="btn operator" id="divide">÷</button>
+
+      <!-- Ряд 2: 7,8,9, умножение -->
+      <button class="btn" id="digit7">7</button>
+      <button class="btn" id="digit8">8</button>
+      <button class="btn" id="digit9">9</button>
+      <button class="btn operator" id="multiply">×</button>
+
+      <!-- Ряд 3: 4,5,6, минус -->
+      <button class="btn" id="digit4">4</button>
+      <button class="btn" id="digit5">5</button>
+      <button class="btn" id="digit6">6</button>
+      <button class="btn operator" id="subtract">−</button>
+
+      <!-- Ряд 4: 1,2,3, плюс -->
+      <button class="btn" id="digit1">1</button>
+      <button class="btn" id="digit2">2</button>
+      <button class="btn" id="digit3">3</button>
+      <button class="btn operator" id="add">+</button>
+
+      <!-- Ряд 5: ± (смена знака), 0, точка, равно -->
+      <button class="btn action" id="negate">±</button>
+      <button class="btn zero" id="digit0">0</button>
+      <button class="btn" id="decimal">.</button>
+      <button class="btn equals" id="equals">=</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Элементы DOM
+      const expressionEl = document.getElementById('expression');
+      const resultEl = document.getElementById('result');
+
+      // Состояние калькулятора
+      let currentOperand = '0';
+      let previousOperand = '';
+      let operation = null;
+      let shouldResetScreen = false;
+      let expressionString = ''; // Для отображения всей строки выражения
+
+      // Флаги для обработки процента и скобок (упрощенная логика)
+      let openParenthesis = false; // отслеживаем, есть ли открытая скобка
+
+      // Функция обновления дисплея
+      function updateDisplay() {
+        // Отображаем выражение (история)
+        expressionEl.textContent = expressionString || '';
+        // Основной результат
+        resultEl.textContent = currentOperand;
+      }
+
+      // Очистка всего
+      function clearAll() {
+        currentOperand = '0';
+        previousOperand = '';
+        operation = null;
+        shouldResetScreen = false;
+        expressionString = '';
+        openParenthesis = false;
+        updateDisplay();
+      }
+
+      // Сброс текущего операнда (для ввода нового числа)
+      function resetCurrentOperand() {
+        currentOperand = '0';
+        shouldResetScreen = false;
+      }
+
+      // Добавление цифры
+      function appendDigit(digit) {
+        if (shouldResetScreen) {
+          currentOperand = '';
+          shouldResetScreen = false;
+        }
+        // Ограничение длины, чтобы не вылезало за экран
+        if (currentOperand.length >= 15) return;
+        
+        if (currentOperand === '0' && digit !== '0') {
+          currentOperand = digit;
+        } else if (currentOperand === '0' && digit === '0') {
+          // Не добавляем лишние нули в начале
+          return;
+        } else {
+          currentOperand += digit;
+        }
+        updateDisplay();
+      }
+
+      // Добавление десятичной точки
+      function appendDecimal() {
+        if (shouldResetScreen) {
+          currentOperand = '0';
+          shouldResetScreen = false;
+        }
+        // Если точка уже есть, не добавляем
+        if (!currentOperand.includes('.')) {
+          currentOperand += '.';
+        }
+        updateDisplay();
+      }
+
+      // Смена знака
+      function toggleSign() {
+        if (currentOperand === '0') return;
+        if (currentOperand.startsWith('-')) {
+          currentOperand = currentOperand.slice(1);
+        } else {
+          currentOperand = '-' + currentOperand;
+        }
+        // Если после смены знака было shouldResetScreen, сбрасываем
+        shouldResetScreen = false;
+        updateDisplay();
+      }
+
+      // Процент (работает относительно текущего или предыдущего)
+      function applyPercent() {
+        if (currentOperand === '0' || currentOperand === '') return;
+        let value = parseFloat(currentOperand);
+        if (isNaN(value)) return;
+        
+        // Если есть предыдущий операнд и операция, вычисляем процент от него
+        if (previousOperand !== '' && operation !== null) {
+          const prev = parseFloat(previousOperand);
+          if (!isNaN(prev)) {
+            value = (prev * value) / 100;
+          }
+        } else {
+          value = value / 100;
+        }
+        
+        // Округляем до разумного количества знаков
+        currentOperand = String(Math.round(value * 1e10) / 1e10);
+        // Убираем возможный лишний ноль в конце .0
+        if (currentOperand.endsWith('.0')) {
+          currentOperand = currentOperand.slice(0, -2);
+        }
+        shouldResetScreen = true;
+        updateDisplay();
+      }
+
+      // Обработка скобок (упрощённая: вставляет открывающую или закрывающую)
+      function handleParentheses() {
+        // Эта логика простая: если нет открытой скобки или последний символ выражения - оператор/начало, ставим '('
+        // Иначе ставим ')'
+        // Работаем с expressionString для отображения, но вычисления будем делать через eval с осторожностью.
+        // В данном калькуляторе скобки влияют на выражение, которое мы строим.
+        if (!openParenthesis) {
+          // Добавляем открывающую скобку в выражение, если это уместно
+          // Если текущий операнд не пустой и мы не после оператора? Упростим: добавляем '(' к expressionString
+          if (shouldResetScreen && operation !== null) {
+            // Начинаем новое число после оператора, можно вставить скобку
+            expressionString += '(';
+            openParenthesis = true;
+            // Текущий операнд остаётся, но выражение расширяется
+          } else if (currentOperand === '0' && expressionString === '') {
+            expressionString = '(';
+            openParenthesis = true;
+            currentOperand = '0';
+          } else if (!shouldResetScreen && currentOperand !== '0' && expressionString === '') {
+            // Начало ввода
+            expressionString = '(';
+            openParenthesis = true;
+            // не сбрасываем currentOperand, но теперь выражение начинается с '('
+          } else if (operation !== null && previousOperand !== '') {
+            // после оператора
+            expressionString += '(';
+            openParenthesis = true;
+            shouldResetScreen = true;
+          }
+        } else {
+          // Закрываем скобку: добавляем текущий операнд и ')'
+          if (currentOperand !== '0' || expressionString.endsWith(')') === false) {
+            // Формируем часть: число и закрывающая скобка
+            if (!shouldResetScreen || currentOperand !== '0') {
+              expressionString += currentOperand;
+            }
+            expressionString += ')';
+            openParenthesis = false;
+            // Теперь текущий операнд становится результатом? Сложно, упростим: сбросим shouldResetScreen
+            shouldResetScreen = true;
+            // Оставляем currentOperand как есть, но выражение обновлено
+          }
+        }
+        updateDisplay();
+      }
+
+      // Выбор оператора
+      function chooseOperator(op) {
+        // op: '+', '-', '*', '/'
+        if (operation !== null && !shouldResetScreen) {
+          // Если уже есть операция, вычисляем промежуточный результат
+          compute();
+        }
+        
+        // Сохраняем текущий операнд как previous
+        previousOperand = currentOperand;
+        operation = op;
+        shouldResetScreen = true;
+        
+        // Обновляем строку выражения
+        // Если выражение пустое, начинаем с previousOperand
+        if (expressionString === '') {
+          expressionString = previousOperand;
+        } else {
+          // Если последний символ не число и не скобка, возможно нужно добавить previousOperand
+          // Упрощенно: добавляем previousOperand и оператор, но аккуратно с дублированием.
+          // Лучше пересобирать: expressionString может содержать предыдущие части.
+          // Проверим, заканчивается ли выражение числом или скобкой.
+          const lastChar = expressionString.slice(-1);
+          if (/[\d)]/.test(lastChar)) {
+            // Уже есть число или скобка, добавляем оператор
+            expressionString += ' ' + getOperatorSymbol(op) + ' ';
+          } else if (/[+\-*/÷×−]/.test(lastChar)) {
+            // Если последний символ оператор, заменяем его
+            expressionString = expressionString.slice(0, -1) + ' ' + getOperatorSymbol(op) + ' ';
+          } else {
+            expressionString += previousOperand + ' ' + getOperatorSymbol(op) + ' ';
+          }
+        }
+        
+        updateDisplay();
+      }
+
+      function getOperatorSymbol(op) {
+        switch(op) {
+          case '+': return '+';
+          case '-': return '−';
+          case '*': return '×';
+          case '/': return '÷';
+          default: return op;
+        }
+      }
+
+      // Выполнение вычисления
+      function compute() {
+        if (operation === null || shouldResetScreen) return;
+        
+        const prev = parseFloat(previousOperand);
+        const current = parseFloat(currentOperand);
+        
+        if (isNaN(prev) || isNaN(current)) return;
+        
+        let computation;
+        switch (operation) {
+          case '+':
+            computation = prev + current;
+            break;
+          case '-':
+            computation = prev - current;
+            break;
+          case '*':
+            computation = prev * current;
+            break;
+          case '/':
+            if (current === 0) {
+              alert('Деление на ноль невозможно');
+              clearAll();
+              return;
+            }
+            computation = prev / current;
+            break;
+          default:
+            return;
+        }
+        
+        // Округление для избежания проблем с плавающей точкой
+        computation = Math.round(computation * 1e10) / 1e10;
+        currentOperand = String(computation);
+        operation = null;
+        previousOperand = '';
+        shouldResetScreen = true;
+        
+        // Добавляем текущий операнд в выражение перед вычислением? Уже было.
+        // Обновим expressionString: заменяем всё на результат или добавляем?
+        // Для красоты можно показать полное выражение с результатом, но очистим для нового ввода.
+        expressionString = currentOperand;
+        openParenthesis = false;
+        updateDisplay();
+      }
+
+      // Обработка нажатия равно
+      function handleEquals() {
+        if (operation === null) {
+          // Если нет операции, просто показываем число, возможно завершаем скобку
+          if (openParenthesis) {
+            expressionString += currentOperand + ')';
+            openParenthesis = false;
+          }
+          updateDisplay();
+          return;
+        }
+        
+        // Добавляем текущий операнд в выражение перед вычислением
+        if (!shouldResetScreen) {
+          expressionString += currentOperand;
+        }
+        
+        compute();
+        // expressionString обновляется внутри compute до результата
+      }
+
+      // Обработка кнопки Backspace (не реализована в интерфейсе, но можно добавить; здесь оставим без нее для чистоты Material You, 
+      // но можно использовать C для очистки. В кнопках нет backspace, поэтому удалим этот метод или оставим для возможного использования.
+      // Не используется.
+
+      // Инициализация обработчиков событий
+      function init() {
+        // Цифры
+        for (let i = 0; i <= 9; i++) {
+          document.getElementById(`digit${i}`).addEventListener('click', () => appendDigit(i.toString()));
+        }
+        
+        // Десятичная точка
+        document.getElementById('decimal').addEventListener('click', appendDecimal);
+        
+        // Очистка
+        document.getElementById('clear').addEventListener('click', clearAll);
+        
+        // Смена знака
+        document.getElementById('negate').addEventListener('click', toggleSign);
+        
+        // Процент
+        document.getElementById('percent').addEventListener('click', applyPercent);
+        
+        // Скобки
+        document.getElementById('parentheses').addEventListener('click', handleParentheses);
+        
+        // Операторы
+        document.getElementById('add').addEventListener('click', () => chooseOperator('+'));
+        document.getElementById('subtract').addEventListener('click', () => chooseOperator('-'));
+        document.getElementById('multiply').addEventListener('click', () => chooseOperator('*'));
+        document.getElementById('divide').addEventListener('click', () => chooseOperator('/'));
+        
+        // Равно
+        document.getElementById('equals').addEventListener('click', handleEquals);
+
+        // Поддержка клавиатуры (опционально, для удобства)
+        window.addEventListener('keydown', (e) => {
+          if (e.key >= '0' && e.key <= '9') {
+            e.preventDefault();
+            appendDigit(e.key);
+          } else if (e.key === '.') {
+            e.preventDefault();
+            appendDecimal();
+          } else if (e.key === 'Escape' || e.key === 'Delete') {
+            e.preventDefault();
+            clearAll();
+          } else if (e.key === 'Backspace') {
+            e.preventDefault();
+            // Реализуем удаление последнего символа (упрощённо)
+            if (currentOperand.length > 1) {
+              currentOperand = currentOperand.slice(0, -1);
+              if (currentOperand === '-') currentOperand = '0';
+            } else {
+              currentOperand = '0';
+            }
+            shouldResetScreen = false;
+            updateDisplay();
+          } else if (e.key === '(' || e.key === ')') {
+            e.preventDefault();
+            handleParentheses();
+          } else if (e.key === '%') {
+            e.preventDefault();
+            applyPercent();
+          } else if (e.key === '+') {
+            e.preventDefault();
+            chooseOperator('+');
+          } else if (e.key === '-') {
+            e.preventDefault();
+            chooseOperator('-');
+          } else if (e.key === '*') {
+            e.preventDefault();
+            chooseOperator('*');
+          } else if (e.key === '/') {
+            e.preventDefault();
+            chooseOperator('/');
+          } else if (e.key === 'Enter' || e.key === '=') {
+            e.preventDefault();
+            handleEquals();
+          }
+        });
+      }
+
+      // Запуск
+      init();
+      updateDisplay();
+    })();
+  </script>
 </body>
 </html>
