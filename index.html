@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ollama Chaos — web</title>
+<style>
+:root{
+  --bg:#2b2b2b; --fg:#e0e0e0; --muted:#888; --entry:#3b3b3b;
+  --chat:#1e1e1e; --btn:#1f6aa5; --btn-a:#155a8a; --danger:#a33;
+  --danger-a:#822; --free:#f0c040; --wit:#c080ff;
+  --user:#4a9eff; --repl:#ff4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font:13px/1.4 'Segoe UI',system-ui,sans-serif;
+     display:flex;flex-direction:column;overflow:hidden}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+     padding:4px 8px;border-bottom:1px solid #333}
+label{font-size:13px}
+.muted{color:var(--muted);font-size:12px}
+input,select{background:var(--entry);color:var(--fg);border:1px solid var(--entry);
+             border-radius:4px;padding:4px 6px;font:inherit;outline:none}
+input:focus{border-color:var(--btn)}
+input[type=text].grow{flex:1;min-width:120px}
+input[type=number]{width:64px}
+button{background:var(--btn);color:#fff;border:0;border-radius:5px;
+       padding:6px 12px;cursor:pointer;font:inherit}
+button:hover{background:var(--btn-a)}
+button.danger{background:var(--danger)}
+button.danger:hover{background:var(--danger-a)}
+button:disabled{opacity:.5;cursor:not-allowed}
+#chat{flex:1;overflow-y:auto;background:var(--chat);padding:10px 12px;
+      white-space:pre-wrap;word-wrap:break-word;font-size:14px}
+.u{color:var(--user)} .a{color:var(--fg)} .s{color:var(--muted)}
+.r{color:var(--repl);text-decoration:underline} .w{color:var(--wit)}
+#status{padding:4px 10px;font-size:13px;border-top:1px solid #333;color:var(--fg)}
+#inputRow{display:flex;gap:6px;padding:6px 8px;border-top:1px solid #333}
+#inputRow input{flex:1}
+.h{font-weight:bold}
+</style>
+</head>
+<body>
+
+<!-- Строка 1: замена / chaos / realtime / naked -->
+<div class="row">
+  <label>Слово №</label><input type="number" id="wordIdx" value="3" min="1">
+  <label>на</label><input type="text" id="replacement" value="БАНАН" style="width:120px">
+  <label><input type="checkbox" id="swapOn" checked> Одиночная</label>
+  <label><input type="checkbox" id="chaosOn"> Хаос каждые</label>
+  <input type="number" id="chaosSkip" value="1" min="0">
+  <label class="muted">слов</label>
+  <label><input type="checkbox" id="realtimeOn"> Realtime</label>
+  <label><input type="checkbox" id="nakedOn"> Naked (raw с шага 0)</label>
+  <span class="muted">(обходит chat-API и Modelfile-system)</span>
+</div>
+
+<!-- Строка 2: свободный ход -->
+<div class="row">
+  <span class="h" style="color:var(--free)">Свободный ход:</span>
+  <label><input type="checkbox" id="aiFree"> ИИ</label>
+  <label><input type="checkbox" id="humanFree"> Человек</label>
+  <label><input type="checkbox" id="endlessOn"> Без конца</label>
+  <span class="muted">«Человек» = пачка подряд. «Без конца» = одно сообщение, которое не завершается.</span>
+</div>
+
+<!-- Строка 3: свидетель -->
+<div class="row">
+  <span class="h" style="color:var(--wit)">Свидетель:</span>
+  <label><input type="checkbox" id="witOn"> вкл</label>
+  <label>шанс/шаг:</label>
+  <input type="range" id="witProb" min="0" max="100" value="15" style="width:120px">
+  <span id="witProbLbl">15%</span>
+  <label>уровень:</label>
+  <label><input type="radio" name="witLvl" value="1"> Эхо</label>
+  <label><input type="radio" name="witLvl" value="2" checked> Шёпот</label>
+  <label><input type="radio" name="witLvl" value="3"> Зеркало</label>
+  <span class="muted">(впрыскивает фантомные реплики в prefill)</span>
+</div>
+
+<!-- Строка 4: замена по слову -->
+<div class="row">
+  <label><input type="checkbox" id="wmOn"> Заменять слово</label>
+  <input type="text" id="wmList" class="grow" placeholder="слово1, слово2, ... (регистр и пунктуация не важны)">
+  <span class="muted">→ подменяет совпадения на значение из поля «на:»</span>
+</div>
+
+<!-- Строка 5: системный промт -->
+<div class="row">
+  <span class="h">Системный промт:</span>
+  <label><input type="checkbox" id="sysOn"> вкл</label>
+  <input type="text" id="sysPrompt" class="grow" placeholder="пусто = без системного промта (чистый хаос)">
+  <span class="muted">(галка выключена или пусто → без системного промта)</span>
+</div>
+
+<!-- Строка 6: модель + ключ -->
+<div class="row">
+  <label>Хост:</label>
+  <input type="text" id="host" value="https://ollama.com" style="width:220px">
+  <label>Модель:</label>
+  <input type="text" id="model" value="gemma4:31b-cloud" style="width:200px">
+  <label>API-ключ:</label>
+  <input type="password" id="apiKey" style="width:220px">
+  <label><input type="checkbox" id="showKey"> показать</label>
+  <button id="saveBtn" title="Сохранить ключ и хост в localStorage">💾</button>
+</div>
+
+<div id="chat"></div>
+<div id="status">Готов</div>
+<div id="inputRow">
+  <input type="text" id="msg" placeholder="Введите сообщение..." autocomplete="off">
+  <button id="sendBtn">Отправить</button>
+  <button id="stopBtn" class="danger">Стоп</button>
+</div>
+
+<script>
+"use strict";
+
+// ================= константы =================
+const WITNESS_PROVOCATIONS = [
+  "Ты уверен?","Это неправда.","Стоп.","Почему?","Продолжай.",
+  "Не верю.","А если наоборот?","Ты сам это придумал.","Докажи.",
+  "Сомневаюсь.","Серьёзно?","И что дальше?","Это не имеет смысла.",
+  "Ты противоречишь себе.",
+];
+
+const NUDGE =
+  "<end_of_turn>\n<start_of_turn>user\n(Продолжай.)\n" +
+  "<end_of_turn>\n<start_of_turn>model\n";
+
+const FORMAT_MARKERS = [
+  "<start_of_turn>model\n","<start_of_turn>model",
+  "<start_of_turn>user\n","<start_of_turn>user",
+  "<start_of_turn>","<end_of_turn>","<eos>","</s>","<channel|>",
+];
+
+const CHUNK = 6;
+const REPEAT_LIMIT = 4;
+const WITNESS_COOLDOWN = 3;
+const EMPTY_NUDGE_THRESHOLD = 3;
+const EMPTY_ABORT_THRESHOLD = 25;
+
+// ================= состояние =================
+const S = {
+  messages: [],       // [{role:'user'|'assistant', content:str}]
+  genId: 0,
+  isGenerating: false,
+  stopRequested: false,
+  abortCtrl: null,
+  endless: false,
+};
+
+// ================= DOM =================
+const $ = id => document.getElementById(id);
+const chatEl = $("chat");
+const statusEl = $("status");
+const sendBtn = $("sendBtn");
+const stopBtn = $("stopBtn");
+const msgEl = $("msg");
+
+// ================= helpers =================
+const normWord = w =>
+  w.replace(/^[.,!?;:()[\]{}«»"'`…—–]+|[.,!?;:()[\]{}«»"'`…—–]+$/g,"").toLowerCase();
+
+const pad = (w) => w; // placeholder
+
+function shouldSwap(word, wc, singleIdx, singleUsed, chaosSkip, matchSet){
+  if (matchSet && matchSet.has(normWord(word))) return [true, singleUsed];
+  if (!singleUsed && singleIdx > 0 && wc === singleIdx) return [true, true];
+  if (chaosSkip >= 0) {
+    const period = chaosSkip + 1;
+    if (wc % period === 0) return [true, singleUsed];
+  }
+  return [false, singleUsed];
+}
+
+function sliceWords(text, rng, minN, maxN){
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length < minN) return text.trim();
+  const n = minN + Math.floor(rng() * (Math.min(maxN, words.length) - minN + 1));
+  const start = Math.floor(rng() * (words.length - n + 1));
+  return words.slice(start, start + n).join(" ").trim();
+}
+
+function distort(text, rng){
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return text;
+  if (rng() < 0.55) {
+    const out = [];
+    for (const w of words){
+      const lw = w.toLowerCase();
+      if (lw.startsWith("не") && w.length > 3) out.push(w.slice(2));
+      else if (rng() < 0.20) out.push("не " + w);
+      else out.push(w);
+    }
+    return out.join(" ");
+  } else {
+    if (words.length >= 3){
+      const i = Math.floor(rng()*words.length);
+      let j = Math.floor(rng()*words.length);
+      if (j === i) j = (j+1)%words.length;
+      [words[i], words[j]] = [words[j], words[i]];
+    }
+    return words.join(" ");
+  }
+}
+
+function pickPhantom(history, displayed, level, rng){
+  if (level === 1){ // Эхо
+    const users = history.filter(m => m.role === "user").map(m => m.content);
+    if (!users.length) return null;
+    const src = users[Math.floor(rng()*users.length)];
+    return sliceWords(src, rng, 2, 5);
+  }
+  if (level === 2){ // Шёпот
+    const prov = WITNESS_PROVOCATIONS[Math.floor(rng()*WITNESS_PROVOCATIONS.length)];
+    if (rng() < 0.5) return prov;
+    const users = history.filter(m => m.role === "user").map(m => m.content);
+    if (!users.length) return prov;
+    const src = users[Math.floor(rng()*users.length)];
+    const chunk = sliceWords(src, rng, 2, 5);
+    return chunk ? `${chunk}. ${prov}` : prov;
+  }
+  if (level === 3){ // Зеркало
+    if (!displayed.trim()) return null;
+    const chunk = sliceWords(displayed, rng, 3, 8);
+    if (!chunk) return null;
+    return distort(chunk, rng);
+  }
+  return null;
+}
+
+// ================= промпт (Gemma-стиль) =================
+function getSystemPrompt(){
+  if (!$("sysOn").checked) return "";
+  return $("sysPrompt").value.trim();
+}
+
+function buildRawPrompt(history, partial){
+  const parts = [];
+  let sys = getSystemPrompt();
+  for (const m of history){
+    const role = m.role === "user" ? "user" : "model";
+    let content = m.content;
+    if (role === "user" && sys){
+      content = sys + "\n\n" + content;
+      sys = "";
+    }
+    parts.push(`<start_of_turn>${role}\n${content}<end_of_turn>\n`);
+  }
+  if (sys) parts.push(`<start_of_turn>user\n${sys}<end_of_turn>\n`);
+  parts.push(`<start_of_turn>model\n${partial}`);
+  return parts.join("");
+}
+
+// ================= HTTP / Ollama =================
+function headers(){
+  const h = {"Content-Type":"application/json"};
+  const key = $("apiKey").value.trim();
+  if (key) h["Authorization"] = "Bearer " + key;
+  return h;
+}
+function apiBase(){ return $("host").value.trim().replace(/\/+$/,""); }
+function modelName(){ return $("model").value.trim() || "gemma4:31b-cloud"; }
+
+async function* ndjson(path, body, signal){
+  const res = await fetch(apiBase()+path, {
+    method:"POST", headers:headers(), body: JSON.stringify(body), signal
+  });
+  if (!res.ok) throw new Error(res.status+" "+ (await res.text()).slice(0,400));
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  while (true){
+    const {done, value} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream:true});
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0){
+      const line = buf.slice(0,i).trim();
+      buf = buf.slice(i+1);
+      if (line) { try { yield JSON.parse(line); } catch(_){} }
+    }
+  }
+  if (buf.trim()) { try { yield JSON.parse(buf.trim()); } catch(_){} }
+}
+
+async function ollamaChat(messages, options, signal){
+  // стриминг
+  const body = {model:modelName(), messages, options, stream:true};
+  return ndjson("/api/chat", body, signal);
+}
+
+async function ollamaGenerateRaw(prompt, options, signal){
+  const body = {model:modelName(), prompt, raw:true, options, stream:false};
+  const res = await fetch(apiBase()+"/api/generate", {
+    method:"POST", headers:headers(), body: JSON.stringify(body), signal
+  });
+  if (!res.ok) throw new Error(res.status+" "+ (await res.text()).slice(0,400));
+  return res.json();
+}
+
+// ================= UI log =================
+function append(text, cls){
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  chatEl.appendChild(span);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function status(t){ statusEl.textContent = t; }
+
+// ================= параметры =================
+function getParams(){
+  let singleIdx = parseInt($("wordIdx").value,10);
+  if (isNaN(singleIdx)) singleIdx = -1;
+  if (!$("swapOn").checked) singleIdx = -1;
+  const replacement = $("replacement").value.trim() || "БАНАН";
+  let chaosSkip = parseInt($("chaosSkip").value,10);
+  if (isNaN(chaosSkip)) chaosSkip = 1;
+  chaosSkip = Math.max(0, chaosSkip);
+  if (!$("chaosOn").checked) chaosSkip = -1;
+
+  const matchSet = new Set();
+  if ($("wmOn").checked){
+    const raw = $("wmList").value.trim();
+    if (raw) for (const w of raw.split(",")) {
+      const n = normWord(w.trim()); if (n) matchSet.add(n);
+    }
+  }
+  return {singleIdx, replacement, chaosSkip, matchSet};
+}
+
+// ================= режим stream =================
+async function queryStream(myGen, signal){
+  const {singleIdx, replacement, chaosSkip, matchSet} = getParams();
+  const sys = getSystemPrompt();
+  const send = (sys ? [{role:"system", content:sys}] : []).concat(S.messages);
+
+  let buffer = "", full = "";
+  let wc = 0, singleUsed = false;
+  const rng = Math.random;
+
+  function handleWord(word, delim){
+    if (!word){
+      full += delim;
+      append(delim, "a");
+      return;
+    }
+    wc++;
+    const [doSwap, used] = shouldSwap(word, wc, singleIdx, singleUsed, chaosSkip, matchSet);
+    singleUsed = used;
+    if (doSwap){
+      full += replacement + delim;
+      append(replacement + delim, "r");
+    } else {
+      full += word + delim;
+      append(word + delim, "a");
+    }
+  }
+
+  try {
+    const options = {temperature:0.7, repeat_penalty:1.1};
+    for await (const obj of await ollamaChat(send, options, signal)){
+      if (myGen !== S.genId) return;
+      const content = obj?.message?.content || "";
+      if (!content) continue;
+      buffer += content;
+      while (true){
+        const sp = buffer.indexOf(" "), nl = buffer.indexOf("\n");
+        if (sp === -1 && nl === -1) break;
+        let pos, delim;
+        if (sp === -1){ pos = nl; delim = "\n"; }
+        else if (nl === -1){ pos = sp; delim = " "; }
+        else { pos = Math.min(sp, nl); delim = sp < nl ? " " : "\n"; }
+        const word = buffer.slice(0,pos);
+        buffer = buffer.slice(pos+delim.length);
+        handleWord(word, delim);
+      }
+    }
+    if (buffer) handleWord(buffer, "");
+    if (myGen !== S.genId) return;
+    S.messages.push({role:"assistant", content:full});
+    onDone(myGen);
+  } catch(e){
+    if (myGen !== S.genId) return;
+    append("\n[Ошибка: " + e.message + "]\n", "s");
+    onError();
+  }
+}
+
+// ================= режим realtime =================
+async function queryRealtime(myGen, signal){
+  const {singleIdx, replacement, chaosSkip, matchSet} = getParams();
+  const endless = $("endlessOn").checked;
+
+  const witOn = $("witOn").checked;
+  const witProb = parseInt($("witProb").value,10) / 100;
+  const witLvl = parseInt(document.querySelector('input[name="witLvl"]:checked').value,10);
+
+  const history = S.messages.slice();
+  const MAX_STEPS = endless ? 200000 : 400;
+
+  let promptStream = "";
+  let uiText = "";
+  let buffer = "";
+  let wc = 0, singleUsed = false;
+  let lastChunk = "", repeatCount = 0;
+  let aborted = false;
+  let nudgePending = false;
+  let emptyStreak = 0, nudgedStreak = false;
+  let lastWitnessStep = -1000;
+
+  const clean = t => {
+    let s = t;
+    for (const m of FORMAT_MARKERS) s = s.split(m).join("");
+    return s.replace(/\uFFFD/g,"");
+  };
+
+  const isGarbage = t => {
+    const s = t.trim();
+    if (!s) return true;
+    for (const ch of s){
+      const cp = ch.codePointAt(0);
+      if (/[a-zа-я0-9]/i.test(ch) || cp > 0x2000) return false;
+    }
+    return true;
+  };
+
+  function emitDelim(d){ promptStream += d; uiText += d; append(d, "a"); }
+  function emitWord(word, d){
+    wc++;
+    const [doSwap, used] = shouldSwap(word, wc, singleIdx, singleUsed, chaosSkip, matchSet);
+    singleUsed = used;
+    if (doSwap){
+      promptStream += replacement + d; uiText += replacement + d;
+      append(replacement + d, "r");
+    } else {
+      promptStream += word + d; uiText += word + d;
+      append(word + d, "a");
+    }
+  }
+  function flushWords(){
+    while (true){
+      const sp = buffer.indexOf(" "), nl = buffer.indexOf("\n");
+      if (sp === -1 && nl === -1) break;
+      let pos, delim;
+      if (sp === -1){ pos = nl; delim = "\n"; }
+      else if (nl === -1){ pos = sp; delim = " "; }
+      else { pos = Math.min(sp, nl); delim = sp < nl ? " " : "\n"; }
+      const w = buffer.slice(0,pos);
+      buffer = buffer.slice(pos+delim.length);
+      if (w) emitWord(w, delim); else emitDelim(delim);
+    }
+  }
+
+  try {
+    for (let step = 0; step < MAX_STEPS; step++){
+      if (myGen !== S.genId) break;
+
+      let rawChunk = "";
+
+      if (!promptStream && !buffer && step === 0){
+        if ($("nakedOn").checked){
+          const prompt = buildRawPrompt(history, "");
+          const resp = await ollamaGenerateRaw(prompt, {
+            num_predict: CHUNK, temperature: 0.7, repeat_penalty: 1.1,
+            stop: ["<end_of_turn>","<eos>","</s>","<start_of_turn>"],
+          }, signal);
+          rawChunk = resp.response || "";
+        } else {
+          const sys = getSystemPrompt();
+          const first = (sys ? [{role:"system", content:sys}] : []).concat(history);
+          const body = {model:modelName(), messages:first, stream:false,
+                        options:{num_predict:CHUNK, temperature:0.7, repeat_penalty:1.1}};
+          const r = await fetch(apiBase()+"/api/chat",
+            {method:"POST", headers:headers(), body:JSON.stringify(body), signal});
+          if (!r.ok) throw new Error(r.status+" "+(await r.text()).slice(0,300));
+          const j = await r.json();
+          rawChunk = j?.message?.content || "";
+        }
+      } else {
+        let prefill = promptStream + buffer;
+        if (nudgePending){ prefill += NUDGE; nudgePending = false; }
+
+        if (witOn && step > 1 && (step - lastWitnessStep) >= WITNESS_COOLDOWN && Math.random() < witProb){
+          const ph = pickPhantom(history, promptStream, witLvl, Math.random);
+          if (ph){
+            prefill += "<end_of_turn>\n<start_of_turn>user\n" + ph +
+                       "<end_of_turn>\n<start_of_turn>model\n";
+            lastWitnessStep = step;
+            append("\n[👁 " + ph + "]\n", "w");
+          }
+        }
+
+        const prompt = buildRawPrompt(history, prefill);
+        const stop = endless
+          ? ["<start_of_turn>","<eos>","</s>"]
+          : ["<end_of_turn>","<eos>","</s>","<start_of_turn>"];
+
+        const resp = await ollamaGenerateRaw(prompt, {
+          num_predict: CHUNK, temperature: 0.7, repeat_penalty: 1.1, stop,
+        }, signal);
+        rawChunk = resp.response || "";
+      }
+
+      const chunk = clean(rawChunk);
+
+      if (endless && rawChunk.includes("<end_of_turn>")) nudgePending = true;
+
+      if (!chunk){
+        emptyStreak++;
+        if (step === 0 && !endless){
+          append("\n[Модель не вернула текста на первом шаге. Проверь шаблон: ollama show " +
+                 modelName() + " --template]\n", "s");
+          aborted = true; break;
+        }
+        if (endless && emptyStreak >= EMPTY_NUDGE_THRESHOLD && !nudgedStreak){
+          nudgePending = true; nudgedStreak = true;
+        }
+        if (endless && emptyStreak >= EMPTY_ABORT_THRESHOLD){
+          append("\n[Без конца: модель упорно молчит. Останавливаюсь.]\n", "s");
+          aborted = true; break;
+        }
+        continue;
+      }
+      emptyStreak = 0; nudgedStreak = false;
+
+      if (step === 0 && isGarbage(chunk)){
+        append("\n[Первый чанк — не текст: " + JSON.stringify(chunk.slice(0,24)) +
+               ". Похоже, " + modelName() + " не умеет prefill через raw.]\n", "s");
+        aborted = true; break;
+      }
+
+      const stripped = chunk.trim();
+      const mono = stripped.length >= 3 && new Set(stripped).size === 1 && !/^[a-zа-я0-9]+$/i.test(stripped);
+      const same = chunk === lastChunk && chunk.length >= 4;
+
+      if (same || mono){
+        repeatCount++;
+        if (repeatCount >= REPEAT_LIMIT){
+          if (endless){ nudgePending = true; repeatCount = 0; }
+          else {
+            append("\n[Прервано: зацикливание.]\n", "s");
+            aborted = true; break;
+          }
+        }
+      } else repeatCount = 0;
+      lastChunk = chunk;
+
+      buffer += chunk;
+      flushWords();
+    }
+
+    if (buffer && !aborted) emitWord(buffer, "");
+    if (myGen !== S.genId) return;
+    S.messages.push({role:"assistant", content:uiText});
+    onDone(myGen);
+  } catch(e){
+    if (myGen !== S.genId) return;
+    append("\n[Ошибка: " + e.message + "]\n", "s");
+    onError();
+  }
+}
+
+// ================= жизненный цикл генерации =================
+function onDone(myGen){
+  append("\n\n");
+  S.isGenerating = false;
+  if ($("aiFree").checked && !$("endlessOn").checked && !S.stopRequested
+      && !$("humanFree").checked && myGen === S.genId){
+    startAi();
+  } else {
+    if (!$("humanFree").checked){
+      sendBtn.disabled = false;
+      status("Готов");
+    } else {
+      status("Свободный ход — пиши ещё.");
+    }
+  }
+}
+function onError(){
+  S.isGenerating = false;
+  sendBtn.disabled = false;
+  status("Ошибка");
+}
+
+function startAi(){
+  S.genId++;
+  const myGen = S.genId;
+  S.stopRequested = false;
+  S.abortCtrl = new AbortController();
+
+  append("\nИИ: ", "s");
+  S.isGenerating = true;
+  if (!$("humanFree").checked) sendBtn.disabled = true;
+  status("Генерация...");
+
+  const useRealtime = $("realtimeOn").checked || $("endlessOn").checked || $("nakedOn").checked;
+  const fn = useRealtime ? queryRealtime : queryStream;
+  fn(myGen, S.abortCtrl.signal);
+}
+
+function maybeStartAi(){
+  if (S.isGenerating) return;
+  if ($("humanFree").checked) return;
+  if (!S.messages.length) return;
+  if (S.messages[S.messages.length-1].role !== "user") return;
+  startAi();
+}
+
+function killGeneration(){
+  if (!S.isGenerating) return;
+  S.stopRequested = true;
+  S.genId++;
+  S.isGenerating = false;
+  if (S.abortCtrl) { try { S.abortCtrl.abort(); } catch(_){} }
+}
+
+// ================= ввод =================
+function sendMessage(){
+  const txt = msgEl.value.trim();
+  if (!txt) return;
+  if (S.isGenerating && !$("humanFree").checked) return;
+  msgEl.value = "";
+
+  if ($("humanFree").checked){
+    killGeneration();
+    append("Вы: " + txt + "\n", "u");
+    S.messages.push({role:"user", content:txt});
+    status("Свободный ход — пиши ещё. Снять «Человек» → ИИ ответит.");
+    return;
+  }
+
+  append("Вы: " + txt + "\n", "u");
+  S.messages.push({role:"user", content:txt});
+  startAi();
+}
+
+// ================= события =================
+sendBtn.addEventListener("click", sendMessage);
+msgEl.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+stopBtn.addEventListener("click", () => {
+  S.stopRequested = true; S.genId++; S.isGenerating = false;
+  if (S.abortCtrl) try { S.abortCtrl.abort(); } catch(_){}
+  sendBtn.disabled = false;
+  status("Остановлено");
+});
+
+$("humanFree").addEventListener("change", () => {
+  if ($("humanFree").checked){
+    killGeneration();
+    sendBtn.disabled = false;
+    status("Свободный ход — ИИ ждёт. Снять «Человек», чтобы ИИ ответил.");
+  } else {
+    sendBtn.disabled = false;
+    maybeStartAi();
+  }
+});
+
+$("endlessOn").addEventListener("change", () => {
+  if ($("endlessOn").checked && !$("realtimeOn").checked){
+    $("realtimeOn").checked = true;
+    status("«Без конца» работает через Realtime. Realtime включён.");
+  }
+});
+$("nakedOn").addEventListener("change", () => {
+  if ($("nakedOn").checked && !$("realtimeOn").checked){
+    $("realtimeOn").checked = true;
+    status("Naked работает через Realtime. Realtime включён.");
+  }
+});
+
+$("witProb").addEventListener("input", () => {
+  $("witProbLbl").textContent = $("witProb").value + "%";
+});
+
+$("showKey").addEventListener("change", () => {
+  $("apiKey").type = $("showKey").checked ? "text" : "password";
+});
+
+// ================= localStorage =================
+const LS = "ollamaChaosWeb";
+function saveSettings(){
+  try {
+    localStorage.setItem(LS, JSON.stringify({
+      host: $("host").value, model: $("model").value, apiKey: $("apiKey").value,
+    }));
+    status("Настройки сохранены");
+    setTimeout(() => status("Готов"), 800);
+  } catch(_){}
+}
+function loadSettings(){
+  try {
+    const j = JSON.parse(localStorage.getItem(LS) || "{}");
+    if (j.host) $("host").value = j.host;
+    if (j.model) $("model").value = j.model;
+    if (j.apiKey) $("apiKey").value = j.apiKey;
+  } catch(_){}
+  // fallback из env-подобного не нужен — в браузере всё руками
+}
+$("saveBtn").addEventListener("click", saveSettings);
+loadSettings();
+
+status("Готов");
+</script>
+</body>
+</html>
