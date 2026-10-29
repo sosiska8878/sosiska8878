@@ -3,370 +3,163 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Activation Lock Helper v3</title>
+  <title>Activation Lock Helper v4</title>
   <style>
-    /* ---------- RESET & BASE ---------- */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0a0a0d;
-      --surface: #141418;
-      --surface-hover: #1e1e24;
-      --border: #26262e;
-      --border-subtle: #1c1c22;
-      --text: #f5f5f7;
-      --text-secondary: #a1a1aa;
-      --text-muted: #63636e;
-      --accent: #30d158;
-      --warn: #ff9f0a;
-      --danger: #ff453a;
-      --info: #0a84ff;
-      --radius-sm: 10px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-      --transition: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --bg: #0a0a0d; --surface: #141418; --surface-hover: #1e1e24;
+      --border: #26262e; --border-subtle: #1c1c22;
+      --text: #f5f5f7; --text-secondary: #a1a1aa; --text-muted: #63636e;
+      --accent: #30d158; --warn: #ff9f0a; --danger: #ff453a; --info: #0a84ff;
+      --radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3); --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+      --transition: .2s cubic-bezier(.25,.1,.25,1);
     }
-
-    html {
-      -webkit-text-size-adjust: 100%;
-    }
-
+    html { -webkit-text-size-adjust: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 32px 16px 56px;
-      line-height: 1.5;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 16px 56px; line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       background-image:
-        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(48, 209, 88, 0.06), transparent),
-        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(10, 132, 255, 0.04), transparent);
+        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(48,209,88,.06), transparent),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(10,132,255,.04), transparent);
     }
-
-    /* ---------- HEADER ---------- */
-    .header {
-      text-align: center;
-      margin-bottom: 32px;
-      max-width: 600px;
-    }
-
+    .header { text-align: center; margin-bottom: 28px; max-width: 620px; }
     .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--accent);
-      background: rgba(48, 209, 88, 0.1);
-      border: 1px solid rgba(48, 209, 88, 0.2);
-      padding: 5px 12px;
-      border-radius: 999px;
-      margin-bottom: 14px;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--accent); background: rgba(48,209,88,.1);
+      border: 1px solid rgba(48,209,88,.2); padding: 5px 12px; border-radius: 999px; margin-bottom: 14px;
     }
-
-    .badge .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
     h1 {
-      font-size: clamp(1.5rem, 4vw, 1.9rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 4vw, 1.9rem); font-weight: 700; letter-spacing: -.03em; margin-bottom: 10px;
       background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
+    .sub { color: var(--text-secondary); font-size: .86rem; max-width: 540px; margin: 0 auto; line-height: 1.55; }
 
-    .sub {
-      color: var(--text-secondary);
-      font-size: 0.88rem;
-      max-width: 520px;
-      margin: 0 auto;
-      line-height: 1.55;
-    }
-
-    /* ---------- GRID ---------- */
     .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 12px;
-      width: 100%;
-      max-width: 720px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px; width: 100%; max-width: 760px;
     }
-
-    /* ---------- BUTTONS ---------- */
     .btn {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 16px 14px;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.92rem;
-      font-weight: 500;
-      font-family: inherit;
-      text-align: left;
-      transition:
-        background var(--transition),
-        border-color var(--transition),
-        transform 0.1s ease,
-        box-shadow var(--transition);
-      box-shadow: var(--shadow-sm);
-      -webkit-tap-highlight-color: transparent;
-      outline: none;
-      overflow: hidden;
+      position: relative; display: flex; flex-direction: column; align-items: flex-start;
+      gap: 8px; background: var(--surface); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 16px 14px; color: var(--text);
+      cursor: pointer; font-size: .92rem; font-weight: 500; font-family: inherit;
+      text-align: left; transition: background var(--transition), border-color var(--transition),
+        transform .1s ease, box-shadow var(--transition); box-shadow: var(--shadow-sm);
+      -webkit-tap-highlight-color: transparent; outline: none; overflow: hidden;
     }
-
-    .btn::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      opacity: 0;
-      transition: opacity var(--transition);
-      background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent 60%);
-      pointer-events: none;
-    }
-
-    .btn:hover::after {
-      opacity: 1;
-    }
-
-    .btn:hover {
-      background: var(--surface-hover);
-      border-color: var(--border);
-    }
-
-    .btn:active {
-      transform: scale(0.97);
-      background: var(--surface-hover);
-    }
-
-    .btn:focus-visible {
-      border-color: var(--info);
-      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25);
-    }
-
+    .btn:hover { background: var(--surface-hover); border-color: var(--border); }
+    .btn:active { transform: scale(.97); background: var(--surface-hover); }
+    .btn:focus-visible { border-color: var(--info); box-shadow: 0 0 0 3px rgba(10,132,255,.25); }
     .btn .icon {
-      font-size: 1.4rem;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.04);
-      margin-bottom: 2px;
-      flex-shrink: 0;
-      transition: background var(--transition);
+      font-size: 1.35rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      background: rgba(255,255,255,.04); margin-bottom: 2px; flex-shrink: 0; transition: background var(--transition);
     }
+    .btn:hover .icon { background: rgba(255,255,255,.08); }
+    .btn .label { display: block; line-height: 1.3; }
+    .btn .desc { font-size: .72rem; font-weight: 400; color: var(--text-secondary); line-height: 1.4; }
+    .btn.warn { border-left: 3px solid var(--warn); }
+    .btn.warn .icon { background: rgba(255,159,10,.1); }
+    .btn.warn:hover .icon { background: rgba(255,159,10,.18); }
+    .btn.danger { border-left: 3px solid var(--danger); }
+    .btn.danger .icon { background: rgba(255,69,58,.1); }
+    .btn.danger:hover .icon { background: rgba(255,69,58,.18); }
+    .btn.new { border-left: 3px solid var(--accent); }
+    .btn.new .icon { background: rgba(48,209,88,.1); }
+    .btn.new:hover .icon { background: rgba(48,209,88,.18); }
+    .btn.info { border-left: 3px solid var(--info); }
+    .btn.info .icon { background: rgba(10,132,255,.1); }
+    .btn.info:hover .icon { background: rgba(10,132,255,.18); }
 
-    .btn:hover .icon {
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    .btn .label {
-      display: block;
-      line-height: 1.3;
-    }
-
-    .btn .desc {
-      font-size: 0.72rem;
-      font-weight: 400;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
-
-    /* ---------- ACCENT VARIANTS ---------- */
-    .btn.warn {
-      border-left: 3px solid var(--warn);
-    }
-    .btn.warn .icon {
-      background: rgba(255, 159, 10, 0.1);
-    }
-    .btn.warn:hover .icon {
-      background: rgba(255, 159, 10, 0.18);
-    }
-
-    .btn.danger {
-      border-left: 3px solid var(--danger);
-    }
-    .btn.danger .icon {
-      background: rgba(255, 69, 58, 0.1);
-    }
-    .btn.danger:hover .icon {
-      background: rgba(255, 69, 58, 0.18);
-    }
-
-    .btn.new {
-      border-left: 3px solid var(--accent);
-    }
-    .btn.new .icon {
-      background: rgba(48, 209, 88, 0.1);
-    }
-    .btn.new:hover .icon {
-      background: rgba(48, 209, 88, 0.18);
-    }
-
-    .btn.info {
-      border-left: 3px solid var(--info);
-    }
-    .btn.info .icon {
-      background: rgba(10, 132, 255, 0.1);
-    }
-    .btn.info:hover .icon {
-      background: rgba(10, 132, 255, 0.18);
-    }
-
-    /* ---------- SECTION DIVIDER ---------- */
     .section-label {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      padding: 12px 4px 4px;
-      margin-top: 8px;
+      grid-column: 1 / -1; display: flex; align-items: center; gap: 12px;
+      font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--text-muted); padding: 12px 4px 4px; margin-top: 8px;
     }
+    .section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, var(--border), transparent); }
 
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, var(--border), transparent);
+    .camera-card {
+      grid-column: 1 / -1; display: none; flex-direction: column; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 12px; width: 100%;
     }
+    .camera-card.active { display: flex; }
+    .camera-card video {
+      width: 100%; max-height: 260px; border-radius: var(--radius-sm);
+      background: #000; object-fit: cover; transform: scaleX(-1);
+    }
+    .camera-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .camera-row button {
+      flex: 1; min-width: 120px; padding: 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--surface-hover); color: var(--text);
+      font-family: inherit; font-size: .82rem; font-weight: 500; cursor: pointer;
+    }
+    .camera-row button:hover { background: var(--border); }
 
-    /* ---------- STATUS ---------- */
     .status {
-      margin-top: 20px;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--accent);
-      min-height: 1.4em;
-      text-align: center;
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      background: transparent;
-      transition: background var(--transition), opacity var(--transition);
-      opacity: 0;
-      max-width: 520px;
+      margin-top: 18px; font-size: .82rem; font-weight: 500; color: var(--accent);
+      min-height: 1.4em; text-align: center; padding: 8px 16px;
+      border-radius: var(--radius-sm); opacity: 0; max-width: 620px; transition: all var(--transition);
     }
+    .status.visible { opacity: 1; background: rgba(48,209,88,.08); }
+    .status.error { color: var(--danger); background: rgba(255,69,58,.08); }
 
-    .status.visible {
-      opacity: 1;
-      background: rgba(48, 209, 88, 0.08);
+    .console {
+      width: 100%; max-width: 760px; margin-top: 22px;
+      background: #050507; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+      padding: 12px 14px; max-height: 320px; overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .74rem; line-height: 1.55; color: var(--text-secondary);
     }
-
-    .status.error {
-      color: var(--danger);
-      background: rgba(255, 69, 58, 0.08);
+    .console .line { padding: 2px 0; white-space: pre-wrap; word-break: break-word; }
+    .console .line .t { color: var(--text-muted); margin-right: 6px; }
+    .console .line.ok { color: var(--accent); }
+    .console .line.err { color: var(--danger); }
+    .console .line.warn { color: var(--warn); }
+    .console .line.info { color: var(--info); }
+    .console .head { display:flex; justify-content: space-between; align-items:center; margin-bottom:6px; }
+    .console .head span { font-weight: 600; color: var(--text-secondary); }
+    .console .head button {
+      font-family: inherit; font-size: .68rem; padding: 3px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer;
     }
+    .console .head button:hover { color: var(--text); border-color: var(--text-muted); }
 
-    /* ---------- FOOTER ---------- */
     .footer {
-      margin-top: 40px;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-align: center;
-      max-width: 520px;
-      line-height: 1.6;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-subtle);
+      margin-top: 32px; font-size: .7rem; color: var(--text-muted); text-align: center;
+      max-width: 620px; line-height: 1.6; padding-top: 20px; border-top: 1px solid var(--border-subtle);
     }
 
-    .footer a {
-      color: var(--text-secondary);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-    }
-
-    /* ---------- RESPONSIVE ---------- */
     @media (max-width: 480px) {
-      body {
-        padding: 20px 12px 40px;
-      }
-
-      .grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-
-      .btn {
-        padding: 14px 12px;
-        gap: 6px;
-      }
-
-      .btn .icon {
-        width: 32px;
-        height: 32px;
-        font-size: 1.25rem;
-      }
-
-      .btn .desc {
-        font-size: 0.68rem;
-      }
+      body { padding: 20px 12px 40px; }
+      .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .btn { padding: 14px 12px; gap: 6px; }
+      .btn .icon { width: 32px; height: 32px; font-size: 1.2rem; }
+      .btn .desc { font-size: .68rem; }
     }
-
-    @media (max-width: 340px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* ---------- REDUCED MOTION ---------- */
+    @media (max-width: 340px) { .grid { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div class="badge">
-      <span class="dot"></span>
-      v3 · 2025–2026
-    </div>
+    <div class="badge"><span class="dot"></span> v4 · 2025–2026</div>
     <h1>Activation Lock Helper</h1>
     <p class="sub">
-      Дополнительные векторы: браузерные разрешения на камеру/микрофон,
-      вызов поиска Google, диалог «Открыть через», обновлённые
-      техники из отчётов 2025–2026 (XML-инъекция, CVE-2025-43534).
+      Онлайн-камера, запрос всех разрешений (камера/микрофон/гео/уведомления/буфер/
+      Bluetooth/MIDI/wake lock), перезагрузка браузера, выход на главный экран,
+      показ уведомления, диагностика окружения. Попапы отключены — всё в лог.
     </p>
   </header>
 
@@ -377,27 +170,22 @@
     <button class="btn info" onclick="openShortcutsSafari()" role="listitem">
       <span class="icon">🌐</span>
       <span class="label">Открыть Safari</span>
-      <span class="desc">icloud.com/shortcuts + «Открыть ссылку»</span>
+      <span class="desc">icloud.com/shortcuts</span>
     </button>
     <button class="btn info" onclick="openShortcutsApp()" role="listitem">
       <span class="icon">⚡</span>
       <span class="label">Открыть Shortcuts</span>
-      <span class="desc">Прямой запуск приложения Команды</span>
+      <span class="desc">Схема shortcuts://</span>
     </button>
     <button class="btn info" onclick="openCameraTrick()" role="listitem">
       <span class="icon">📷</span>
       <span class="label">Камера (схема)</span>
-      <span class="desc">Попытка через camera://</span>
+      <span class="desc">camera:// / mobilenotes://</span>
     </button>
     <button class="btn info" onclick="openShareSheet()" role="listitem">
       <span class="icon">📤</span>
       <span class="label">Поделиться</span>
-      <span class="desc">Системный Share Sheet</span>
-    </button>
-    <button class="btn warn" onclick="openWifiProxyHint()" role="listitem">
-      <span class="icon">📶</span>
-      <span class="label">Wi-Fi / Прокси</span>
-      <span class="desc">Подсказка по Provisioning-прокси</span>
+      <span class="desc">navigator.share</span>
     </button>
     <button class="btn info" onclick="openICloud()" role="listitem">
       <span class="icon">☁️</span>
@@ -407,50 +195,120 @@
     <button class="btn danger" onclick="bufferOverflowWifi()" role="listitem">
       <span class="icon">💥</span>
       <span class="label">Переполнение (Wi-Fi)</span>
-      <span class="desc">iOS 10.1–10.1.1, длинная строка</span>
-    </button>
-    <button class="btn warn" onclick="quickStartMigration()" role="listitem">
-      <span class="icon">🔄</span>
-      <span class="label">Quick Start</span>
-      <span class="desc">Миграция Device-to-Device (iOS 18.6)</span>
+      <span class="desc">iOS 10.1–10.1.1, попап</span>
     </button>
 
-    <div class="section-label">Новые векторы</div>
+    <div class="section-label">Разрешения и уведомления</div>
 
+    <button class="btn new" onclick="requestAllPermissions()" role="listitem">
+      <span class="icon">🔐</span>
+      <span class="label">Все разрешения</span>
+      <span class="desc">Камера, микрофон, гео, буфер, BT, MIDI, wake lock…</span>
+    </button>
     <button class="btn new" onclick="requestMediaPermissions()" role="listitem">
       <span class="icon">🎥</span>
       <span class="label">Камера / Микрофон</span>
-      <span class="desc">Запрос разрешений через getUserMedia</span>
+      <span class="desc">getUserMedia (видео+аудио)</span>
     </button>
-    <button class="btn new" onclick="openGoogleSearch()" role="listitem">
-      <span class="icon">🔍</span>
-      <span class="label">Поиск Google</span>
-      <span class="desc">Вызов Google в Safari (обход белого списка)</span>
+    <button class="btn new" onclick="sendNotification()" role="listitem">
+      <span class="icon">🔔</span>
+      <span class="label">Показать уведомление</span>
+      <span class="desc">Запрос + new Notification</span>
     </button>
-    <button class="btn new" onclick="triggerOpenInDialog()" role="listitem">
-      <span class="icon">📂</span>
-      <span class="label">«Открыть через»</span>
-      <span class="desc">Попытка вызвать системный диалог</span>
+
+    <div class="section-label">Камера онлайн</div>
+
+    <div class="camera-card" id="cameraCard">
+      <video id="camStream" autoplay playsinline muted></video>
+      <div class="camera-row">
+        <button onclick="stopCameraStream()">Стоп</button>
+        <button onclick="snapshotCamera()">Снимок в лог</button>
+      </div>
+    </div>
+
+    <button class="btn new" onclick="startCameraStream()" role="listitem">
+      <span class="icon">🎬</span>
+      <span class="label">Онлайн-камера</span>
+      <span class="desc">Живой видеопоток в странице</span>
     </button>
-    <button class="btn danger" onclick="xmlInjectionHint()" role="listitem">
-      <span class="icon">📡</span>
-      <span class="label">XML-инъекция (humb)</span>
-      <span class="desc">humb.apple.com/humbug/baa (iOS 18.5)</span>
+
+    <div class="section-label">Перезагрузка / главный экран</div>
+
+    <button class="btn warn" onclick="tryReloadBrowser()" role="listitem">
+      <span class="icon">🔁</span>
+      <span class="label">Перезагрузить браузер</span>
+      <span class="desc">reload / href / history.go(0)</span>
     </button>
-    <button class="btn danger" onclick="pathHandlingHint()" role="listitem">
-      <span class="icon">📂</span>
-      <span class="label">Path Handling (CVE)</span>
-      <span class="desc">CVE-2025-43534: валидация путей в Setup</span>
+    <button class="btn warn" onclick="tryGoHome()" role="listitem">
+      <span class="icon">🏠</span>
+      <span class="label">На главный экран</span>
+      <span class="desc">window.close / app:// / home://</span>
     </button>
-    <button class="btn warn" onclick="openMenuShortcutHint()" role="listitem">
-      <span class="icon">🔓</span>
-      <span class="label">Open Menu / FMI-OFF</span>
-      <span class="desc">Shortcut-метод без компьютера (iOS 12–26)</span>
+
+    <div class="section-label">Диагностика и окружение</div>
+
+    <button class="btn info" onclick="showDiagnostics()" role="listitem">
+      <span class="icon">📊</span>
+      <span class="label">Диагностика</span>
+      <span class="desc">UA, платформа, разрешения, состояние</span>
+    </button>
+    <button class="btn info" onclick="copyDiagnostics()" role="listitem">
+      <span class="icon">📋</span>
+      <span class="label">Скопировать диагностику</span>
+      <span class="desc">В буфер обмена</span>
+    </button>
+    <button class="btn info" onclick="toggleFullscreen()" role="listitem">
+      <span class="icon">⛶</span>
+      <span class="label">Полный экран</span>
+      <span class="desc">requestFullscreen</span>
+    </button>
+    <button class="btn info" onclick="vibrateDevice()" role="listitem">
+      <span class="icon">📳</span>
+      <span class="label">Вибрация</span>
+      <span class="desc">navigator.vibrate</span>
+    </button>
+    <button class="btn info" onclick="requestWakeLock()" role="listitem">
+      <span class="icon">💡</span>
+      <span class="label">Wake Lock</span>
+      <span class="desc">Не гасить экран</span>
+    </button>
+    <button class="btn info" onclick="lockOrientation()" role="listitem">
+      <span class="icon">🔄</span>
+      <span class="label">Ориентация</span>
+      <span class="desc">screen.orientation.lock</span>
+    </button>
+    <button class="btn info" onclick="requestGeo()" role="listitem">
+      <span class="icon">📍</span>
+      <span class="label">Геолокация</span>
+      <span class="desc">getCurrentPosition</span>
+    </button>
+    <button class="btn info" onclick="readClipboard()" role="listitem">
+      <span class="icon">📋</span>
+      <span class="label">Читать буфер</span>
+      <span class="desc">clipboard.readText</span>
+    </button>
+    <button class="btn info" onclick="persistStorage()" role="listitem">
+      <span class="icon">💾</span>
+      <span class="label">Persistent Storage</span>
+      <span class="desc">navigator.storage.persist</span>
+    </button>
+    <button class="btn info" onclick="testWindowOpen()" role="listitem">
+      <span class="icon">🪟</span>
+      <span class="label">window.open</span>
+      <span class="desc">Тест блокировки всплывающих</span>
     </button>
 
   </main>
 
   <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <section class="console" id="console">
+    <div class="head">
+      <span>Лог событий</span>
+      <button onclick="clearLog()">Очистить</button>
+    </div>
+    <div id="logBody"></div>
+  </section>
 
   <footer class="footer">
     Не является официальным обходом Activation Lock. Используйте только на своём
@@ -459,208 +317,452 @@
   </footer>
 
   <script>
+    /* ============================================================
+       ЛОГ И СТАТУС
+       ============================================================ */
     const statusEl = document.getElementById('status');
+    const logBody  = document.getElementById('logBody');
     let statusTimer = null;
 
     function setStatus(msg, isError = false) {
       if (statusTimer) clearTimeout(statusTimer);
-
       statusEl.textContent = msg;
       statusEl.classList.add('visible');
       statusEl.classList.toggle('error', isError);
-
       statusTimer = setTimeout(() => {
-        statusEl.classList.remove('visible');
-        statusEl.classList.remove('error');
+        statusEl.classList.remove('visible', 'error');
         statusTimer = null;
       }, 5000);
     }
 
-    /* ---------- Старые функции ---------- */
+    function log(msg, kind = '') {
+      const line = document.createElement('div');
+      line.className = 'line ' + kind;
+      const t = document.createElement('span');
+      t.className = 't';
+      t.textContent = new Date().toLocaleTimeString('ru-RU', { hour12: false });
+      line.appendChild(t);
+      line.appendChild(document.createTextNode(msg));
+      logBody.appendChild(line);
+      logBody.parentElement.scrollTop = logBody.parentElement.scrollHeight;
+      if (logBody.childElementCount > 300) logBody.removeChild(logBody.firstChild);
+    }
+
+    function clearLog() { logBody.innerHTML = ''; }
+    function ok(m)   { log(m, 'ok');   setStatus(m); }
+    function err(m)  { log(m, 'err');  setStatus(m, true); }
+    function warn(m) { log(m, 'warn'); setStatus(m); }
+    function info(m) { log(m, 'info'); }
+
+    /* ============================================================
+       БАЗОВЫЕ ВЕКТОРЫ
+       ============================================================ */
     function openShortcutsSafari() {
-      try {
-        window.location.href = 'https://www.icloud.com/shortcuts';
-        setStatus('Открываю icloud.com/shortcuts…');
-      } catch (e) {
-        setStatus('Не удалось открыть ссылку', true);
-      }
+      info('Переход на icloud.com/shortcuts');
+      try { window.location.href = 'https://www.icloud.com/shortcuts'; ok('Открываю icloud.com/shortcuts…'); }
+      catch (e) { err('Не удалось открыть ссылку: ' + e.message); }
     }
-
     function openShortcutsApp() {
-      try {
-        window.location.href = 'shortcuts://';
-        setStatus('Запускаю Shortcuts…');
-      } catch (e) {
-        setStatus('Shortcuts не запустились', true);
-      }
+      info('Схема shortcuts://');
+      try { window.location.href = 'shortcuts://'; ok('Запускаю Shortcuts…'); }
+      catch (e) { err('Shortcuts не запустились: ' + e.message); }
     }
-
     function openCameraTrick() {
-      try {
-        window.location.href = 'camera://';
-        setStatus('Пробую camera://…');
-      } catch (e) {
-        try {
-          window.location.href = 'mobilenotes://';
-          setStatus('Открываю Заметки…');
-        } catch (e2) {
-          setStatus('Не удалось открыть', true);
-        }
+      info('Пробую camera:// → mobilenotes://');
+      try { window.location.href = 'camera://'; ok('Пробую camera://…'); }
+      catch (e) {
+        try { window.location.href = 'mobilenotes://'; ok('Открываю Заметки…'); }
+        catch (e2) { err('Не удалось открыть схему'); }
       }
     }
-
     async function openShareSheet() {
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Activation Lock Helper',
-            text: 'Попытка доступа',
-            url: window.location.href
-          });
-          setStatus('Share Sheet открыт');
-        } catch (e) {
-          setStatus('Share отменён или недоступен', true);
-        }
-      } else {
-        setStatus('Share Sheet недоступен', true);
-      }
-    }
-
-    function openWifiProxyHint() {
-      alert(
-        'Метод прокси (Provisioning):\n\n' +
-        '1. Подключитесь к Wi-Fi.\n' +
-        '2. Нажмите «i» рядом с сетью.\n' +
-        '3. Прокси → Вручную.\n' +
-        '4. Укажите сервер и порт.\n' +
-        '5. Перезапустите активацию.'
-      );
-      setStatus('Показана подсказка по прокси');
-    }
-
-    function openICloud() {
+      if (!navigator.share) { err('Share Sheet недоступен'); return; }
       try {
-        window.location.href = 'https://www.icloud.com';
-        setStatus('Открываю iCloud.com…');
-      } catch (e) {
-        setStatus('Не удалось открыть iCloud', true);
-      }
+        await navigator.share({ title: 'Activation Lock Helper', text: 'Попытка доступа', url: location.href });
+        ok('Share Sheet открыт');
+      } catch (e) { warn('Share отменён или недоступен: ' + e.name); }
+    }
+    function openICloud() {
+      info('Переход на icloud.com');
+      try { window.location.href = 'https://www.icloud.com'; ok('Открываю iCloud.com…'); }
+      catch (e) { err('Не удалось открыть iCloud'); }
     }
 
+    /* Единственный вектор с попапом — по требованию */
     async function bufferOverflowWifi() {
+      info('Копирую 100000 символов в буфер');
       const huge = 'A'.repeat(100000);
       try {
         await navigator.clipboard.writeText(huge);
-        setStatus('100 000 символов скопированы.');
+        ok('100 000 символов скопированы.');
       } catch (e) {
-        setStatus('Не удалось скопировать', true);
+        err('Не удалось скопировать: ' + e.name);
       }
       alert('Вставьте скопированный текст в поля «Имя», «Пользователь» и «Пароль» на экране Wi-Fi.');
     }
 
-    function quickStartMigration() {
-      alert(
-        'Quick Start (iOS 18.6):\n' +
-        '1. Сбросьте целевой iPhone.\n' +
-        '2. «Перенос с iPhone».\n' +
-        '3. Поднесите источник.\n' +
-        '4. Завершите миграцию.\n' +
-        '5. Снова сбросьте целевой iPhone.'
-      );
-      setStatus('Показана инструкция Quick Start');
+    /* ============================================================
+       ВСЕ РАЗРЕШЕНИЯ
+       ============================================================ */
+    const permNames = [
+      'camera', 'microphone', 'geolocation', 'notifications',
+      'clipboard-read', 'clipboard-write', 'persistent-storage',
+      'bluetooth', 'midi', 'screen-wake-lock', 'background-sync',
+      'accelerometer', 'gyroscope', 'magnetometer',
+      'payment-handler', 'push', 'storage-access', 'top-level-storage-access'
+    ];
+
+    async function requestAllPermissions() {
+      info('=== Запрос всех разрешений ===');
+      let okCount = 0, failCount = 0;
+
+      // 1) Камера + микрофон
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        s.getTracks().forEach(t => t.stop());
+        ok('camera/microphone: получено');
+        okCount++;
+      } catch (e) { warn('camera/microphone: ' + e.name); failCount++; }
+
+      // 2) Геолокация
+      if (navigator.geolocation) {
+        await new Promise(res => {
+          navigator.geolocation.getCurrentPosition(
+            () => { ok('geolocation: получено'); okCount++; res(); },
+            e => { warn('geolocation: ' + (e.message || 'ошибка')); failCount++; res(); },
+            { timeout: 8000, maximumAge: 60000 }
+          );
+        });
+      } else { warn('geolocation: не поддерживается'); failCount++; }
+
+      // 3) Уведомления
+      if ('Notification' in window) {
+        try {
+          const p = await Notification.requestPermission();
+                    if (p === 'granted') { ok('notifications: granted'); okCount++; }
+          else { warn('notifications: ' + p); failCount++; }
+        } catch (e) { warn('notifications: ' + e.name); failCount++; }
+      }
+
+      // 4) Буфер обмена (запись)
+      try {
+        await navigator.clipboard.writeText('ALH-perm-test');
+        ok('clipboard-write: получено'); okCount++;
+      } catch (e) { warn('clipboard-write: ' + e.name); failCount++; }
+
+      // 5) Буфер обмена (чтение)
+      try {
+        await navigator.clipboard.readText();
+        ok('clipboard-read: получено'); okCount++;
+      } catch (e) { warn('clipboard-read: ' + e.name); failCount++; }
+
+      // 6) Persistent storage
+      if (navigator.storage && navigator.storage.persist) {
+        try {
+          const granted = await navigator.storage.persist();
+          if (granted) { ok('persistent-storage: granted'); okCount++; }
+          else { warn('persistent-storage: denied'); failCount++; }
+        } catch (e) { warn('persistent-storage: ' + e.name); failCount++; }
+      }
+
+      // 7) Bluetooth
+      if (navigator.bluetooth && navigator.bluetooth.requestDevice) {
+        try {
+          await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+          ok('bluetooth: устройство выбрано'); okCount++;
+        } catch (e) { warn('bluetooth: ' + e.name); failCount++; }
+      } else { warn('bluetooth: не поддерживается'); failCount++; }
+
+      // 8) MIDI
+      if (navigator.requestMIDIAccess) {
+        try { await navigator.requestMIDIAccess(); ok('midi: получено'); okCount++; }
+        catch (e) { warn('midi: ' + e.name); failCount++; }
+      } else { warn('midi: не поддерживается'); failCount++; }
+
+      // 9) Wake Lock
+      if ('wakeLock' in navigator) {
+        try {
+          const wl = await navigator.wakeLock.request('screen');
+          await wl.release();
+          ok('wake-lock: получено'); okCount++;
+        } catch (e) { warn('wake-lock: ' + e.name); failCount++; }
+      } else { warn('wake-lock: не поддерживается'); failCount++; }
+
+      // 10) Screen orientation lock
+      if (screen.orientation && screen.orientation.lock) {
+        try { await screen.orientation.lock('portrait'); ok('orientation: locked'); okCount++; }
+        catch (e) { warn('orientation: ' + e.name); failCount++; }
+      }
+
+      // 11) Permission API: массовый query
+      if (navigator.permissions && navigator.permissions.query) {
+        for (const name of permNames) {
+          try {
+            const st = await navigator.permissions.query({ name });
+            info('permissions.query ' + name + ' → ' + st.state);
+          } catch (e) {
+            info('permissions.query ' + name + ' → n/a (' + e.name + ')');
+          }
+        }
+      } else { warn('permissions.query: не поддерживается'); }
+
+      info('Итог: ok=' + okCount + ', fail=' + failCount);
+      if (okCount > 0) setStatus('Разрешения обработаны: ok=' + okCount + ', fail=' + failCount);
+      else setStatus('Не удалось получить ни одного разрешения', true);
     }
 
-    /* ---------- Новые функции ---------- */
-
     async function requestMediaPermissions() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setStatus('getUserMedia не поддерживается в этом браузере', true);
-        return;
-      }
+      if (!navigator.mediaDevices?.getUserMedia) { err('getUserMedia не поддерживается'); return; }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         stream.getTracks().forEach(t => t.stop());
-        setStatus('Разрешения на камеру/микрофон получены (треки остановлены)');
-        alert('Браузер запросил доступ к камере и микрофону. Если вы видите системный запрос — это ожидаемо. После разрешения треки остановлены.');
-      } catch (err) {
-        console.warn('getUserMedia error:', err);
+        ok('Камера/микрофон: разрешение получено (треки остановлены)');
+      } catch (err1) {
+        warn('Камера/микрофон: ' + err1.name);
         try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioStream.getTracks().forEach(t => t.stop());
-          setStatus('Разрешение на микрофон получено');
-        } catch (e2) {
-          setStatus('Не удалось получить разрешения: ' + err.name, true);
+          const a = await navigator.mediaDevices.getUserMedia({ audio: true });
+          a.getTracks().forEach(t => t.stop());
+          ok('Микрофон: разрешение получено');
+        } catch (err2) { err('Разрешения не получены: ' + err1.name); }
+      }
+    }
+
+    /* ============================================================
+       УВЕДОМЛЕНИЕ ЧЕРЕЗ РАЗРЕШЕНИЕ
+       ============================================================ */
+    async function sendNotification() {
+      if (!('Notification' in window)) { err('Notification API не поддерживается'); return; }
+      let p = Notification.permission;
+      if (p === 'default') {
+        try { p = await Notification.requestPermission(); }
+        catch (e) { err('Запрос уведомлений: ' + e.name); return; }
+      }
+      if (p !== 'granted') { err('Уведомления запрещены (' + p + ')'); return; }
+      try {
+        const n = new Notification('Activation Lock Helper', {
+          body: 'Уведомление через разрешение в ' + new Date().toLocaleTimeString('ru-RU'),
+          tag: 'alh-notify',
+          silent: false
+        });
+        n.onclick = () => { info('Уведомление нажато'); window.focus(); };
+        n.onshow  = () => info('Уведомление показано');
+        n.onclose = () => info('Уведомление закрыто');
+        n.onerror = () => err('Ошибка уведомления');
+        ok('Уведомление отправлено');
+      } catch (e) { err('Notification: ' + e.message); }
+    }
+
+    /* ============================================================
+       ОНЛАЙН-КАМЕРА (живой поток)
+       ============================================================ */
+    let cameraStream = null;
+    const cameraCard = document.getElementById('cameraCard');
+    const camVideo   = document.getElementById('camStream');
+
+    async function startCameraStream() {
+      if (cameraStream) { info('Поток уже запущен'); return; }
+      if (!navigator.mediaDevices?.getUserMedia) { err('getUserMedia не поддерживается'); return; }
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+        camVideo.srcObject = cameraStream;
+        cameraCard.classList.add('active');
+        const track = cameraStream.getVideoTracks()[0];
+        const s = track.getSettings();
+        ok('Онлайн-камера запущена: ' + (s.width||'?') + 'x' + (s.height||'?'));
+        track.onended = () => { info('Видеотрек завершён'); stopCameraStream(); };
+      } catch (e) { err('Камера: ' + e.name); }
+    }
+
+    function stopCameraStream() {
+      if (!cameraStream) return;
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+      camVideo.srcObject = null;
+      cameraCard.classList.remove('active');
+      ok('Онлайн-камера остановлена');
+    }
+
+    function snapshotCamera() {
+      if (!camVideo.videoWidth) { warn('Нет видеопотока'); return; }
+      const c = document.createElement('canvas');
+      c.width = camVideo.videoWidth;
+      c.height = camVideo.videoHeight;
+      c.getContext('2d').drawImage(camVideo, 0, 0);
+      const data = c.toDataURL('image/jpeg', 0.7);
+      info('Снимок камеры: ' + c.width + 'x' + c.height + ', ' + Math.round(data.length/1024) + ' КБ (dataURL)');
+      try { localStorage.setItem('alh_last_snapshot', data); ok('Снимок сохранён в localStorage'); }
+      catch (e) { warn('Снимок не сохранён: ' + e.name); }
+    }
+
+    /* ============================================================
+       ПЕРЕЗАГРУЗКА БРАУЗЕРА
+       ============================================================ */
+    function tryReloadBrowser() {
+      info('=== Попытка перезагрузить браузер ===');
+      try { history.go(0); info('history.go(0) вызван'); }
+      catch (e) { warn('history.go(0): ' + e.message); }
+      try { location.replace(location.href); }
+      catch (e) { warn('replace: ' + e.message); }
+      try { location.reload(); ok('Вызвано location.reload()'); }
+      catch (e) { err('location.reload(): ' + e.message); }
+    }
+
+    /* ============================================================
+       ПОПЫТКА ВЫЙТИ НА ГЛАВНЫЙ ЭКРАН
+       ============================================================ */
+    function tryGoHome() {
+      info('=== Попытка выйти на главный экран ===');
+      ['app://', 'home://', 'springboard://', 'launcher://', 'main-screen://'].forEach(s => {
+        try {
+          const a = document.createElement('a');
+          a.href = s;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          info('Схема: ' + s + ' → клик');
+        } catch (e) { warn('Схема ' + s + ': ' + e.message); }
+      });
+      try { window.close(); info('window.close() вызван'); }
+      catch (e) { warn('window.close(): ' + e.message); }
+      try {
+        const n = history.length;
+        history.go(-(n - 1));
+        info('history.go(-' + (n - 1) + ') — возврат к первой записи');
+      } catch (e) { warn('history.go: ' + e.message); }
+      try { window.location.href = 'about:blank'; info('location → about:blank'); }
+      catch (e) { warn('about:blank: ' + e.message); }
+      setStatus('Попытки выхода на главный экран выполнены (см. лог)');
+    }
+
+    /* ============================================================
+       ДИАГНОСТИКА И ОКРУЖЕНИЕ
+       ============================================================ */
+    function envString() {
+      return [
+        'UA: ' + navigator.userAgent,
+        'Platform: ' + (navigator.platform || 'n/a'),
+        'Vendor: ' + (navigator.vendor || 'n/a'),
+        'Language: ' + navigator.language,
+        'Languages: ' + (navigator.languages || []).join(','),
+        'CookieEnabled: ' + navigator.cookieEnabled,
+        'Online: ' + navigator.onLine,
+        'HardwareConcurrency: ' + (navigator.hardwareConcurrency || 'n/a'),
+        'DeviceMemory: ' + (navigator.deviceMemory || 'n/a'),
+        'MaxTouchPoints: ' + (navigator.maxTouchPoints || 0),
+        'Screen: ' + screen.width + 'x' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x',
+        'Viewport: ' + window.innerWidth + 'x' + window.innerHeight,
+        'Connection: ' + (navigator.connection ? (navigator.connection.effectiveType + ' / ' + navigator.connection.downlink + 'Mb/s') : 'n/a'),
+        'Notification.permission: ' + (('Notification' in window) ? Notification.permission : 'n/a'),
+        'Standalone (PWA): ' + window.matchMedia('(display-mode: standalone)').matches,
+        'Referrer: ' + (document.referrer || 'none'),
+        'URL: ' + location.href,
+        'Time: ' + new Date().toISOString()
+      ].join('\n');
+    }
+
+    function showDiagnostics() {
+      envString().split('\n').forEach(l => info(l));
+      ok('Диагностика выведена в лог');
+    }
+
+    async function copyDiagnostics() {
+      try {
+        await navigator.clipboard.writeText(envString());
+        ok('Диагностика скопирована в буфер');
+      } catch (e) { err('Копирование: ' + e.name); }
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          ok('Полный экран включён');
+        } else {
+          await document.exitFullscreen();
+          ok('Полный экран выключен');
         }
-      }
+      } catch (e) { err('Fullscreen: ' + e.name); }
     }
 
-    function openGoogleSearch() {
-      const q = encodeURIComponent('site:apple.com activation lock');
-      const url = 'https://www.google.com/search?q=' + q;
+    function vibrateDevice() {
+      if (!navigator.vibrate) { err('Вибрация не поддерживается'); return; }
+      const okv = navigator.vibrate([120, 60, 120, 60, 240]);
+      if (okv) ok('Вибрация запущена'); else err('Вибрация отклонена');
+    }
+
+    let wakeLockRef = null;
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) { err('Wake Lock не поддерживается'); return; }
       try {
-        window.location.href = url;
-        setStatus('Открываю Google Поиск…');
-      } catch (e) {
-        setStatus('Не удалось открыть Google', true);
-      }
+        wakeLockRef = await navigator.wakeLock.request('screen');
+        ok('Wake Lock активен — экран не гаснет');
+        wakeLockRef.addEventListener('release', () => info('Wake Lock освобождён'));
+      } catch (e) { err('Wake Lock: ' + e.name); }
     }
 
-    function triggerOpenInDialog() {
+    async function lockOrientation() {
+      if (!screen.orientation || !screen.orientation.lock) { err('Orientation lock не поддерживается'); return; }
+      try { await screen.orientation.lock('portrait'); ok('Ориентация зафиксирована: portrait'); }
+      catch (e) { err('Orientation: ' + e.name); }
+    }
+
+    async function requestGeo() {
+      if (!navigator.geolocation) { err('Геолокация не поддерживается'); return; }
+      navigator.geolocation.getCurrentPosition(
+        p => ok('Гео: ' + p.coords.latitude.toFixed(5) + ', ' + p.coords.longitude.toFixed(5) + ' ±' + Math.round(p.coords.accuracy) + 'м'),
+        e => err('Гео: ' + (e.message || e.code)),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    }
+
+    async function readClipboard() {
+      if (!navigator.clipboard?.readText) { err('Чтение буфера не поддерживается'); return; }
       try {
-        const a = document.createElement('a');
-        a.href = 'data:text/plain;charset=utf-8,Activation%20Lock%20Helper';
-        a.download = 'helper.txt';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setStatus('Попытка вызвать диалог загрузки/открытия');
-        alert('Если браузер поддерживает — должен появиться системный диалог. На iOS Safari это часто открывает меню «Поделиться» или «Открыть в…».');
-      } catch (e) {
-        setStatus('Диалог «Открыть через» не удалось вызвать', true);
-      }
+        const txt = await navigator.clipboard.readText();
+        info('Буфер (' + txt.length + ' симв.): ' + txt.slice(0, 120) + (txt.length > 120 ? '…' : ''));
+        ok('Буфер прочитан');
+      } catch (e) { err('Буфер: ' + e.name); }
     }
 
-    function xmlInjectionHint() {
-      alert(
-        'XML-инъекция (humb.apple.com/humbug/baa):\n\n' +
-        '• Уязвимость в iOS 18.5 (и, возможно, около того).\n' +
-        '• Во время активации устройство обращается к humb.apple.com/humbug/baa.\n' +
-        '• Ответ (unsigned .plist) принимается без проверки подписи.\n' +
-        '• Атакующий в сети (MITM) может внедрить произвольный XML.\n' +
-        '• Требует позиции в сети (прокси/точка доступа).\n' +
-        '• Исправлено в более новых версиях.'
-      );
-      setStatus('Показана информация по XML-инъекции');
+    async function persistStorage() {
+      if (!navigator.storage?.persist) { err('persist() не поддерживается'); return; }
+      try {
+        const granted = await navigator.storage.persist();
+        const est = navigator.storage.estimate ? await navigator.storage.estimate() : null;
+        if (granted) ok('Persistent storage: granted' + (est ? ' (quota ' + Math.round((est.quota||0)/1048576) + ' МБ)' : ''));
+        else warn('Persistent storage: denied');
+      } catch (e) { err('persist: ' + e.name); }
     }
 
-    function pathHandlingHint() {
-      alert(
-        'CVE-2025-43534 (Path Handling):\n\n' +
-        '• Ошибка валидации путей в Setup Assistant / Activation.\n' +
-        '• Позволяет обойти Activation Lock при физическом доступе.\n' +
-        '• Затрагивает iOS/iPadOS до 18.7.7 и 26.0–26.2.\n' +
-        '• Исправлено в iOS 18.7.7, iPadOS 18.7.7, iOS 26.2, iPadOS 26.2.\n' +
-        '• Публичного веб-эксплойта нет — требуется специально сформированный путь/запрос.'
-      );
-      setStatus('Показана информация о CVE-2025-43534');
+    function testWindowOpen() {
+      try {
+        const w = window.open('', '_blank', 'width=320,height=200');
+        if (w) {
+          info('window.open: открыт');
+          try { w.document.write('<p>ALH test window</p>'); } catch(e){}
+          setTimeout(() => { try { w.close(); } catch(e){} }, 2000);
+          ok('window.open сработал');
+        } else err('window.open заблокирован');
+      } catch (e) { err('window.open: ' + e.message); }
     }
 
-    function openMenuShortcutHint() {
-      alert(
-        'Open Menu / FMI-OFF (Shortcuts):\n\n' +
-        '1. Скачайте шорткат (ссылка обычно в сообществе).\n' +
-        '2. Добавьте его в приложение «Команды».\n' +
-        '3. Разрешите запрашиваемые доступы (сеть, автоматизация).\n' +
-        '4. Аутентифицируйтесь с вашим Apple ID (Face ID / Touch ID / пароль).\n' +
-        '5. Выключите Wi-Fi и сотовые данные (офлайн-режим).\n' +
-        '6. Запустите шорткат снова — он сгенерирует коды.\n' +
-        '7. Передайте коды администратору сервиса (например, через Telegram).\n\n' +
-        'Метод позиционируется как работающий на iOS 12–26, но требует доверия к стороннему сервису.'
-      );
-      setStatus('Показана инструкция Open Menu / FMI-OFF');
-    }
+    /* ============================================================
+       ГЛОБАЛЬНЫЕ СОБЫТИЯ / ХУКИ
+       ============================================================ */
+    window.addEventListener('beforeunload', () => log('Событие beforeunload (попытка уйти со страницы)'));
+    window.addEventListener('pagehide', () => log('Событие pagehide'));
+    document.addEventListener('visibilitychange', () => log('visibilitychange → ' + document.visibilityState));
+    window.addEventListener('online',  () => log('online: сеть доступна', 'ok'));
+    window.addEventListener('offline', () => log('offline: сеть недоступна', 'warn'));
+    window.addEventListener('error', e => log('JS error: ' + (e.message||'unknown'), 'err'));
+    window.addEventListener('unhandledrejection', e => log('Unhandled rejection: ' + (e.reason?.name || e.reason), 'err'));
+
+    info('Activation Lock Helper v4 загружен.');
+    info('User-Agent: ' + navigator.userAgent);
   </script>
 
 </body>
