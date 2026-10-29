@@ -2,208 +2,598 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Activation Lock Helper v3</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ---------- RESET & BASE ---------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0a0a0d;
+      --surface: #141418;
+      --surface-hover: #1e1e24;
+      --border: #26262e;
+      --border-subtle: #1c1c22;
+      --text: #f5f5f7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #63636e;
+      --accent: #30d158;
+      --warn: #ff9f0a;
+      --danger: #ff453a;
+      --info: #0a84ff;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --transition: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f0f12; color: #f5f5f7; min-height: 100vh;
-      display: flex; flex-direction: column; align-items: center;
-      padding: 24px 16px 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 56px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(48, 209, 88, 0.06), transparent),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(10, 132, 255, 0.04), transparent);
     }
-    h1 { font-size: 1.6rem; margin-bottom: 6px; text-align: center; letter-spacing: -0.02em; }
-    .sub { color: #8e8e93; font-size: 0.85rem; text-align: center; max-width: 520px; margin-bottom: 28px; line-height: 1.45; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; width: 100%; max-width: 680px; }
+
+    /* ---------- HEADER ---------- */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      max-width: 600px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(48, 209, 88, 0.1);
+      border: 1px solid rgba(48, 209, 88, 0.2);
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 4vw, 1.9rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.55;
+    }
+
+    /* ---------- GRID ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ---------- BUTTONS ---------- */
     .btn {
-      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-      background: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 14px;
-      padding: 16px 14px; color: #f5f5f7; text-decoration: none;
-      font-size: 0.95rem; font-weight: 500; cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent; border: none; text-align: left; font-family: inherit;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 14px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 500;
+      font-family: inherit;
+      text-align: left;
+      transition:
+        background var(--transition),
+        border-color var(--transition),
+        transform 0.1s ease,
+        box-shadow var(--transition);
+      box-shadow: var(--shadow-sm);
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+      overflow: hidden;
     }
-    .btn:active { transform: scale(0.97); background: #2c2c2e; }
-    .btn .icon { font-size: 1.5rem; line-height: 1; }
-    .btn .desc { font-size: 0.72rem; font-weight: 400; color: #8e8e93; line-height: 1.35; }
-    .btn.warn { border-left: 3px solid #ff9f0a; }
-    .btn.danger { border-left: 3px solid #ff453a; }
-    .btn.new { border-left: 3px solid #30d158; }
-    .footer { margin-top: 32px; font-size: 0.7rem; color: #48484a; text-align: center; max-width: 520px; line-height: 1.5; }
-    .status { margin-top: 16px; font-size: 0.8rem; color: #30d158; min-height: 1.2em; text-align: center; }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity var(--transition);
+      background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent 60%);
+      pointer-events: none;
+    }
+
+    .btn:hover::after {
+      opacity: 1;
+    }
+
+    .btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+      background: var(--surface-hover);
+    }
+
+    .btn:focus-visible {
+      border-color: var(--info);
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25);
+    }
+
+    .btn .icon {
+      font-size: 1.4rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.04);
+      margin-bottom: 2px;
+      flex-shrink: 0;
+      transition: background var(--transition);
+    }
+
+    .btn:hover .icon {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn .label {
+      display: block;
+      line-height: 1.3;
+    }
+
+    .btn .desc {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* ---------- ACCENT VARIANTS ---------- */
+    .btn.warn {
+      border-left: 3px solid var(--warn);
+    }
+    .btn.warn .icon {
+      background: rgba(255, 159, 10, 0.1);
+    }
+    .btn.warn:hover .icon {
+      background: rgba(255, 159, 10, 0.18);
+    }
+
+    .btn.danger {
+      border-left: 3px solid var(--danger);
+    }
+    .btn.danger .icon {
+      background: rgba(255, 69, 58, 0.1);
+    }
+    .btn.danger:hover .icon {
+      background: rgba(255, 69, 58, 0.18);
+    }
+
+    .btn.new {
+      border-left: 3px solid var(--accent);
+    }
+    .btn.new .icon {
+      background: rgba(48, 209, 88, 0.1);
+    }
+    .btn.new:hover .icon {
+      background: rgba(48, 209, 88, 0.18);
+    }
+
+    .btn.info {
+      border-left: 3px solid var(--info);
+    }
+    .btn.info .icon {
+      background: rgba(10, 132, 255, 0.1);
+    }
+    .btn.info:hover .icon {
+      background: rgba(10, 132, 255, 0.18);
+    }
+
+    /* ---------- SECTION DIVIDER ---------- */
+    .section-label {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 4px 4px;
+      margin-top: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    /* ---------- STATUS ---------- */
+    .status {
+      margin-top: 20px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent);
+      min-height: 1.4em;
+      text-align: center;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      transition: background var(--transition), opacity var(--transition);
+      opacity: 0;
+      max-width: 520px;
+    }
+
+    .status.visible {
+      opacity: 1;
+      background: rgba(48, 209, 88, 0.08);
+    }
+
+    .status.error {
+      color: var(--danger);
+      background: rgba(255, 69, 58, 0.08);
+    }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+      margin-top: 40px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 520px;
+      line-height: 1.6;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .footer a {
+      color: var(--text-secondary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 480px) {
+      body {
+        padding: 20px 12px 40px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .btn {
+        padding: 14px 12px;
+        gap: 6px;
+      }
+
+      .btn .icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1.25rem;
+      }
+
+      .btn .desc {
+        font-size: 0.68rem;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ---------- REDUCED MOTION ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <h1>Activation Lock Helper v3</h1>
-  <p class="sub">
-    Дополнительные векторы: браузерные разрешения на камеру/микрофон,
-    вызов поиска Google, диалог «Открыть через», обновлённые
-    техники из отчётов 2025–2026 (XML-инъекция, CVE-2025-43534).
-  </p>
+  <header class="header">
+    <div class="badge">
+      <span class="dot"></span>
+      v3 · 2025–2026
+    </div>
+    <h1>Activation Lock Helper</h1>
+    <p class="sub">
+      Дополнительные векторы: браузерные разрешения на камеру/микрофон,
+      вызов поиска Google, диалог «Открыть через», обновлённые
+      техники из отчётов 2025–2026 (XML-инъекция, CVE-2025-43534).
+    </p>
+  </header>
 
-  <div class="grid">
+  <main class="grid" role="list">
 
-    <!-- Старые кнопки (оставлены для совместимости) -->
-    <button class="btn" onclick="openShortcutsSafari()">
-      <span class="icon">🌐</span> Открыть Safari
-      <span class="desc">Через icloud.com/shortcuts + «Открыть ссылку»</span>
+    <div class="section-label">Базовые</div>
+
+    <button class="btn info" onclick="openShortcutsSafari()" role="listitem">
+      <span class="icon">🌐</span>
+      <span class="label">Открыть Safari</span>
+      <span class="desc">icloud.com/shortcuts + «Открыть ссылку»</span>
     </button>
-    <button class="btn" onclick="openShortcutsApp()">
-      <span class="icon">⚡</span> Открыть Shortcuts
+    <button class="btn info" onclick="openShortcutsApp()" role="listitem">
+      <span class="icon">⚡</span>
+      <span class="label">Открыть Shortcuts</span>
       <span class="desc">Прямой запуск приложения Команды</span>
     </button>
-    <button class="btn" onclick="openCameraTrick()">
-      <span class="icon">📷</span> Камера (схема)
+    <button class="btn info" onclick="openCameraTrick()" role="listitem">
+      <span class="icon">📷</span>
+      <span class="label">Камера (схема)</span>
       <span class="desc">Попытка через camera://</span>
     </button>
-    <button class="btn" onclick="openShareSheet()">
-      <span class="icon">📤</span> Поделиться
+    <button class="btn info" onclick="openShareSheet()" role="listitem">
+      <span class="icon">📤</span>
+      <span class="label">Поделиться</span>
       <span class="desc">Системный Share Sheet</span>
     </button>
-    <button class="btn warn" onclick="openWifiProxyHint()">
-      <span class="icon">📶</span> Wi-Fi / Прокси
+    <button class="btn warn" onclick="openWifiProxyHint()" role="listitem">
+      <span class="icon">📶</span>
+      <span class="label">Wi-Fi / Прокси</span>
       <span class="desc">Подсказка по Provisioning-прокси</span>
     </button>
-    <button class="btn" onclick="openICloud()">
-      <span class="icon">☁️</span> iCloud.com
+    <button class="btn info" onclick="openICloud()" role="listitem">
+      <span class="icon">☁️</span>
+      <span class="label">iCloud.com</span>
       <span class="desc">Веб-версия в Safari</span>
     </button>
-    <button class="btn danger" onclick="bufferOverflowWifi()">
-      <span class="icon">💥</span> Переполнение (Wi-Fi)
+    <button class="btn danger" onclick="bufferOverflowWifi()" role="listitem">
+      <span class="icon">💥</span>
+      <span class="label">Переполнение (Wi-Fi)</span>
       <span class="desc">iOS 10.1–10.1.1, длинная строка</span>
     </button>
-    <button class="btn warn" onclick="quickStartMigration()">
-      <span class="icon">🔄</span> Quick Start
+    <button class="btn warn" onclick="quickStartMigration()" role="listitem">
+      <span class="icon">🔄</span>
+      <span class="label">Quick Start</span>
       <span class="desc">Миграция Device-to-Device (iOS 18.6)</span>
     </button>
 
-    <!-- ========== НОВЫЕ ВЕКТОРЫ ========== -->
+    <div class="section-label">Новые векторы</div>
 
-    <!-- 1. Камера / Микрофон через разрешения браузера -->
-    <button class="btn new" onclick="requestMediaPermissions()">
-      <span class="icon">🎥</span> Камера / Микрофон
+    <button class="btn new" onclick="requestMediaPermissions()" role="listitem">
+      <span class="icon">🎥</span>
+      <span class="label">Камера / Микрофон</span>
       <span class="desc">Запрос разрешений через getUserMedia</span>
     </button>
-
-    <!-- 2. Поиск Google в Safari -->
-    <button class="btn new" onclick="openGoogleSearch()">
-      <span class="icon">🔍</span> Поиск Google
+    <button class="btn new" onclick="openGoogleSearch()" role="listitem">
+      <span class="icon">🔍</span>
+      <span class="label">Поиск Google</span>
       <span class="desc">Вызов Google в Safari (обход белого списка)</span>
     </button>
-
-    <!-- 3. Диалог «Открыть через» -->
-    <button class="btn new" onclick="triggerOpenInDialog()">
-      <span class="icon">📂</span> «Открыть через»
+    <button class="btn new" onclick="triggerOpenInDialog()" role="listitem">
+      <span class="icon">📂</span>
+      <span class="label">«Открыть через»</span>
       <span class="desc">Попытка вызвать системный диалог</span>
     </button>
-
-    <!-- 4. XML-инъекция (humb.apple.com) -->
-    <button class="btn danger" onclick="xmlInjectionHint()">
-      <span class="icon">📡</span> XML-инъекция (humb)
+    <button class="btn danger" onclick="xmlInjectionHint()" role="listitem">
+      <span class="icon">📡</span>
+      <span class="label">XML-инъекция (humb)</span>
       <span class="desc">humb.apple.com/humbug/baa (iOS 18.5)</span>
     </button>
-
-    <!-- 5. CVE-2025-43534 (Path Handling) -->
-    <button class="btn danger" onclick="pathHandlingHint()">
-      <span class="icon">📂</span> Path Handling (CVE)
+    <button class="btn danger" onclick="pathHandlingHint()" role="listitem">
+      <span class="icon">📂</span>
+      <span class="label">Path Handling (CVE)</span>
       <span class="desc">CVE-2025-43534: валидация путей в Setup</span>
     </button>
-
-    <!-- 6. FMI-OFF через Shortcuts (Open Menu) -->
-    <button class="btn warn" onclick="openMenuShortcutHint()">
-      <span class="icon">🔓</span> Open Menu / FMI-OFF
+    <button class="btn warn" onclick="openMenuShortcutHint()" role="listitem">
+      <span class="icon">🔓</span>
+      <span class="label">Open Menu / FMI-OFF</span>
       <span class="desc">Shortcut-метод без компьютера (iOS 12–26)</span>
     </button>
 
-  </div>
+  </main>
 
-  <div class="status" id="status"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
 
-  <div class="footer">
+  <footer class="footer">
     Не является официальным обходом Activation Lock. Используйте только на своём
     устройстве или с разрешения владельца. Многие векторы требуют конкретных
     версий iOS и закрыты в актуальных сборках.
-  </div>
+  </footer>
 
   <script>
     const statusEl = document.getElementById('status');
-    function setStatus(msg) {
+    let statusTimer = null;
+
+    function setStatus(msg, isError = false) {
+      if (statusTimer) clearTimeout(statusTimer);
+
       statusEl.textContent = msg;
-      setTimeout(() => { statusEl.textContent = ''; }, 5000);
+      statusEl.classList.add('visible');
+      statusEl.classList.toggle('error', isError);
+
+      statusTimer = setTimeout(() => {
+        statusEl.classList.remove('visible');
+        statusEl.classList.remove('error');
+        statusTimer = null;
+      }, 5000);
     }
 
-    /* ---------- Старые функции (без изменений) ---------- */
+    /* ---------- Старые функции ---------- */
     function openShortcutsSafari() {
-      try { window.location.href = 'https://www.icloud.com/shortcuts'; setStatus('Открываю icloud.com/shortcuts…'); }
-      catch (e) { setStatus('Не удалось открыть ссылку'); }
+      try {
+        window.location.href = 'https://www.icloud.com/shortcuts';
+        setStatus('Открываю icloud.com/shortcuts…');
+      } catch (e) {
+        setStatus('Не удалось открыть ссылку', true);
+      }
     }
+
     function openShortcutsApp() {
-      try { window.location.href = 'shortcuts://'; setStatus('Запускаю Shortcuts…'); }
-      catch (e) { setStatus('Shortcuts не запустились'); }
+      try {
+        window.location.href = 'shortcuts://';
+        setStatus('Запускаю Shortcuts…');
+      } catch (e) {
+        setStatus('Shortcuts не запустились', true);
+      }
     }
+
     function openCameraTrick() {
-      try { window.location.href = 'camera://'; setStatus('Пробую camera://…'); }
-      catch (e) { window.location.href = 'mobilenotes://'; setStatus('Открываю Заметки…'); }
+      try {
+        window.location.href = 'camera://';
+        setStatus('Пробую camera://…');
+      } catch (e) {
+        try {
+          window.location.href = 'mobilenotes://';
+          setStatus('Открываю Заметки…');
+        } catch (e2) {
+          setStatus('Не удалось открыть', true);
+        }
+      }
     }
+
     async function openShareSheet() {
       if (navigator.share) {
         try {
-          await navigator.share({ title: 'Activation Lock Helper', text: 'Попытка доступа', url: window.location.href });
+          await navigator.share({
+            title: 'Activation Lock Helper',
+            text: 'Попытка доступа',
+            url: window.location.href
+          });
           setStatus('Share Sheet открыт');
-        } catch (e) { setStatus('Share отменён или недоступен'); }
+        } catch (e) {
+          setStatus('Share отменён или недоступен', true);
+        }
       } else {
-        setStatus('Share Sheet недоступен');
+        setStatus('Share Sheet недоступен', true);
       }
     }
+
     function openWifiProxyHint() {
-      alert('Метод прокси (Provisioning):\n\n1. Подключитесь к Wi-Fi.\n2. Нажмите «i» рядом с сетью.\n3. Прокси → Вручную.\n4. Укажите сервер и порт.\n5. Перезапустите активацию.');
+      alert(
+        'Метод прокси (Provisioning):\n\n' +
+        '1. Подключитесь к Wi-Fi.\n' +
+        '2. Нажмите «i» рядом с сетью.\n' +
+        '3. Прокси → Вручную.\n' +
+        '4. Укажите сервер и порт.\n' +
+        '5. Перезапустите активацию.'
+      );
       setStatus('Показана подсказка по прокси');
     }
+
     function openICloud() {
-      try { window.location.href = 'https://www.icloud.com'; setStatus('Открываю iCloud.com…'); }
-      catch (e) { setStatus('Не удалось открыть iCloud'); }
+      try {
+        window.location.href = 'https://www.icloud.com';
+        setStatus('Открываю iCloud.com…');
+      } catch (e) {
+        setStatus('Не удалось открыть iCloud', true);
+      }
     }
+
     async function bufferOverflowWifi() {
       const huge = 'A'.repeat(100000);
-      try { await navigator.clipboard.writeText(huge); setStatus('100 000 символов скопированы.'); }
-      catch (e) { setStatus('Не удалось скопировать'); }
+      try {
+        await navigator.clipboard.writeText(huge);
+        setStatus('100 000 символов скопированы.');
+      } catch (e) {
+        setStatus('Не удалось скопировать', true);
+      }
       alert('Вставьте скопированный текст в поля «Имя», «Пользователь» и «Пароль» на экране Wi-Fi.');
     }
+
     function quickStartMigration() {
-      alert('Quick Start (iOS 18.6):\n1. Сбросьте целевой iPhone.\n2. «Перенос с iPhone».\n3. Поднесите источник.\n4. Завершите миграцию.\n5. Снова сбросьте целевой iPhone.');
+      alert(
+        'Quick Start (iOS 18.6):\n' +
+        '1. Сбросьте целевой iPhone.\n' +
+        '2. «Перенос с iPhone».\n' +
+        '3. Поднесите источник.\n' +
+        '4. Завершите миграцию.\n' +
+        '5. Снова сбросьте целевой iPhone.'
+      );
       setStatus('Показана инструкция Quick Start');
     }
 
-    /* ========== НОВЫЕ ФУНКЦИИ ========== */
+    /* ---------- Новые функции ---------- */
 
-    // 1. Камера / Микрофон через браузерные разрешения
     async function requestMediaPermissions() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setStatus('getUserMedia не поддерживается в этом браузере');
+        setStatus('getUserMedia не поддерживается в этом браузере', true);
         return;
       }
       try {
-        // Сначала пытаемся получить аудио (микрофон)
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        // Если удалось — сразу останавливаем треки, чтобы не держать камеру/микрофон
         stream.getTracks().forEach(t => t.stop());
         setStatus('Разрешения на камеру/микрофон получены (треки остановлены)');
         alert('Браузер запросил доступ к камере и микрофону. Если вы видите системный запрос — это ожидаемо. После разрешения треки остановлены.');
       } catch (err) {
         console.warn('getUserMedia error:', err);
-        // Пробуем отдельно аудио, затем отдельно видео
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           audioStream.getTracks().forEach(t => t.stop());
           setStatus('Разрешение на микрофон получено');
         } catch (e2) {
-          setStatus('Не удалось получить разрешения: ' + err.name);
+          setStatus('Не удалось получить разрешения: ' + err.name, true);
         }
       }
     }
 
-    // 2. Поиск Google (вызов в Safari)
     function openGoogleSearch() {
       const q = encodeURIComponent('site:apple.com activation lock');
       const url = 'https://www.google.com/search?q=' + q;
@@ -211,32 +601,27 @@
         window.location.href = url;
         setStatus('Открываю Google Поиск…');
       } catch (e) {
-        setStatus('Не удалось открыть Google');
+        setStatus('Не удалось открыть Google', true);
       }
     }
 
-    // 3. Диалог «Открыть через» (через попытку открыть файл/ссылку)
     function triggerOpenInDialog() {
-      // Пытаемся инициировать открытие ссылки, которая может вызвать системный диалог
-      const userAgent = navigator.userAgent;
-      // Для iOS Safari диалог «Открыть в…» часто появляется при скачивании файла
-      // или при переходе по ссылке с нестандартной схемой.
       try {
         const a = document.createElement('a');
         a.href = 'data:text/plain;charset=utf-8,Activation%20Lock%20Helper';
         a.download = 'helper.txt';
         a.target = '_blank';
+        a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         setStatus('Попытка вызвать диалог загрузки/открытия');
         alert('Если браузер поддерживает — должен появиться системный диалог. На iOS Safari это часто открывает меню «Поделиться» или «Открыть в…».');
       } catch (e) {
-        setStatus('Диалог «Открыть через» не удалось вызвать');
+        setStatus('Диалог «Открыть через» не удалось вызвать', true);
       }
     }
 
-    // 4. XML-инъекция (humb.apple.com)
     function xmlInjectionHint() {
       alert(
         'XML-инъекция (humb.apple.com/humbug/baa):\n\n' +
@@ -250,7 +635,6 @@
       setStatus('Показана информация по XML-инъекции');
     }
 
-    // 5. CVE-2025-43534
     function pathHandlingHint() {
       alert(
         'CVE-2025-43534 (Path Handling):\n\n' +
@@ -263,7 +647,6 @@
       setStatus('Показана информация о CVE-2025-43534');
     }
 
-    // 6. Open Menu / FMI-OFF через Shortcuts
     function openMenuShortcutHint() {
       alert(
         'Open Menu / FMI-OFF (Shortcuts):\n\n' +
