@@ -1,616 +1,959 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Activation Lock Helper v5</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0a0d; --surface: #141418; --surface-hover: #1e1e24;
-      --border: #26262e; --border-subtle: #1c1c22;
-      --text: #f5f5f7; --text-secondary: #a1a1aa; --text-muted: #63636e;
-      --accent: #30d158; --warn: #ff9f0a; --danger: #ff453a; --info: #0a84ff;
-      --radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,.3); --shadow-md: 0 4px 16px rgba(0,0,0,.4);
-      --transition: .2s cubic-bezier(.25,.1,.25,1);
-    }
-    html { -webkit-text-size-adjust: 100%; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      background: var(--bg); color: var(--text); min-height: 100vh;
-      display: flex; flex-direction: column; align-items: center;
-      padding: 32px 16px 56px; line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      background-image:
-        radial-gradient(ellipse 80% 60% at 50% -20%, rgba(48,209,88,.06), transparent),
-        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(10,132,255,.04), transparent);
-    }
-    .header { text-align: center; margin-bottom: 28px; max-width: 620px; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-      color: var(--accent); background: rgba(48,209,88,.1);
-      border: 1px solid rgba(48,209,88,.2); padding: 5px 12px; border-radius: 999px; margin-bottom: 14px;
-    }
-    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
-    h1 {
-      font-size: clamp(1.5rem, 4vw, 1.9rem); font-weight: 700; letter-spacing: -.03em; margin-bottom: 10px;
-      background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .sub { color: var(--text-secondary); font-size: .86rem; max-width: 540px; margin: 0 auto; line-height: 1.55; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphite</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --panel: #252526;
+            --border: #333333;
+            --text: #d4d4d4;
+            --muted: #8a8a8a;
+            --accent: #7aa2f7;
+            --hover: #2a2a2a;
+            --selection: #35405a;
+            --code-bg: #2d2d2d;
+            --error: #f7768e;
+            --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --mono-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            --editor-font-size: 14px;
+        }
 
-    .grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 12px; width: 100%; max-width: 760px;
-    }
-    .btn {
-      position: relative; display: flex; flex-direction: column; align-items: flex-start;
-      gap: 8px; background: var(--surface); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md); padding: 16px 14px; color: var(--text);
-      cursor: pointer; font-size: .92rem; font-weight: 500; font-family: inherit;
-      text-align: left; transition: background var(--transition), border-color var(--transition),
-        transform .1s ease, box-shadow var(--transition); box-shadow: var(--shadow-sm);
-      -webkit-tap-highlight-color: transparent; outline: none; overflow: hidden;
-    }
-    .btn:hover { background: var(--surface-hover); border-color: var(--border); }
-    .btn:active { transform: scale(.97); background: var(--surface-hover); }
-    .btn:focus-visible { border-color: var(--info); box-shadow: 0 0 0 3px rgba(10,132,255,.25); }
-    .btn .icon {
-      font-size: 1.35rem; line-height: 1; display: flex; align-items: center; justify-content: center;
-      width: 36px; height: 36px; border-radius: var(--radius-sm);
-      background: rgba(255,255,255,.04); margin-bottom: 2px; flex-shrink: 0; transition: background var(--transition);
-    }
-    .btn:hover .icon { background: rgba(255,255,255,.08); }
-    .btn .label { display: block; line-height: 1.3; }
-    .btn .desc { font-size: .72rem; font-weight: 400; color: var(--text-secondary); line-height: 1.4; }
-    .btn.warn { border-left: 3px solid var(--warn); }
-    .btn.warn .icon { background: rgba(255,159,10,.1); }
-    .btn.warn:hover .icon { background: rgba(255,159,10,.18); }
-    .btn.danger { border-left: 3px solid var(--danger); }
-    .btn.danger .icon { background: rgba(255,69,58,.1); }
-    .btn.danger:hover .icon { background: rgba(255,69,58,.18); }
-    .btn.new { border-left: 3px solid var(--accent); }
-    .btn.new .icon { background: rgba(48,209,88,.1); }
-    .btn.new:hover .icon { background: rgba(48,209,88,.18); }
-    .btn.info { border-left: 3px solid var(--info); }
-    .btn.info .icon { background: rgba(10,132,255,.1); }
-    .btn.info:hover .icon { background: rgba(10,132,255,.18); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .section-label {
-      grid-column: 1 / -1; display: flex; align-items: center; gap: 12px;
-      font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--text-muted); padding: 12px 4px 4px; margin-top: 8px;
-    }
-    .section-label::after { content:''; flex:1; height:1px; background: linear-gradient(90deg, var(--border), transparent); }
+        body {
+            font-family: var(--ui-font);
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .camera-card {
-      grid-column: 1 / -1; display: none; flex-direction: column; gap: 8px;
-      background: var(--surface); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md); padding: 12px; width: 100%;
-    }
-    .camera-card.active { display: flex; }
-    .camera-card video {
-      width: 100%; max-height: 260px; border-radius: var(--radius-sm);
-      background: #000; object-fit: cover; transform: scaleX(-1);
-    }
-    .camera-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .camera-row button {
-      flex: 1; min-width: 120px; padding: 10px 12px; border-radius: var(--radius-sm);
-      border: 1px solid var(--border); background: var(--surface-hover); color: var(--text);
-      font-family: inherit; font-size: .82rem; font-weight: 500; cursor: pointer;
-    }
-    .camera-row button:hover { background: var(--border); }
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-    .status {
-      margin-top: 18px; font-size: .82rem; font-weight: 500; color: var(--accent);
-      min-height: 1.4em; text-align: center; padding: 8px 16px;
-      border-radius: var(--radius-sm); opacity: 0; max-width: 620px; transition: all var(--transition);
-    }
-    .status.visible { opacity: 1; background: rgba(48,209,88,.08); }
-    .status.error { color: var(--danger); background: rgba(255,69,58,.08); }
+        /* Welcome Screen */
+        #welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 16px;
+        }
+        .welcome-title { font-size: 32pt; font-weight: 600; }
+        .welcome-subtitle { color: var(--muted); font-size: 12pt; margin-bottom: 24px; }
+        .welcome-btn {
+            background-color: var(--accent);
+            color: var(--bg);
+            padding: 12px 24px;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .welcome-btn:hover { opacity: 0.9; }
+        .welcome-note { color: var(--muted); font-size: 10pt; margin-top: 32px; }
 
-    .console {
-      width: 100%; max-width: 760px; margin-top: 22px;
-      background: #050507; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-      padding: 12px 14px; max-height: 320px; overflow-y: auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: .74rem; line-height: 1.55; color: var(--text-secondary);
-    }
-    .console .line { padding: 2px 0; white-space: pre-wrap; word-break: break-word; }
-    .console .line .t { color: var(--text-muted); margin-right: 6px; }
-    .console .line.ok { color: var(--accent); }
-    .console .line.err { color: var(--danger); }
-    .console .line.warn { color: var(--warn); }
-    .console .line.info { color: var(--info); }
-    .console .head { display:flex; justify-content: space-between; align-items:center; margin-bottom:6px; }
-    .console .head span { font-weight: 600; color: var(--text-secondary); }
-    .console .head button {
-      font-family: inherit; font-size: .68rem; padding: 3px 8px; border-radius: 6px;
-      border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer;
-    }
-    .console .head button:hover { color: var(--text); border-color: var(--text-muted); }
+        /* Main Layout */
+        #main-app { display: none; width: 100vw; height: 100vh; flex-direction: row; }
+        #main-app.active { display: flex; }
 
-    .footer {
-      margin-top: 32px; font-size: .7rem; color: var(--text-muted); text-align: center;
-      max-width: 620px; line-height: 1.6; padding-top: 20px; border-top: 1px solid var(--border-subtle);
-    }
+        /* Sidebar */
+        #sidebar {
+            width: 280px;
+            min-width: 200px;
+            background-color: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 16px;
+            font-weight: 600;
+            font-size: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .tab-btn.active {
+            color: var(--text);
+            border-bottom-color: var(--accent);
+        }
+        .tab-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .action-row, .search-row {
+            padding: 8px;
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+        .action-row button, .search-row button {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .action-row button:hover, .search-row button:hover {
+            background: var(--hover);
+            color: var(--text);
+        }
 
-    @media (max-width: 480px) {
-      body { padding: 20px 12px 40px; }
-      .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-      .btn { padding: 14px 12px; gap: 6px; }
-      .btn .icon { width: 32px; height: 32px; font-size: 1.2rem; }
-      .btn .desc { font-size: .68rem; }
-    }
-    @media (max-width: 340px) { .grid { grid-template-columns: 1fr; } }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
-    }
-  </style>
+        input[type="text"], select, textarea {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 6px 8px;
+            outline: none;
+            font-family: inherit;
+            font-size: 13px;
+            width: 100%;
+        }
+        input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+
+        .tree-container { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .tree-item {
+            padding: 6px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            user-select: none;
+            border-left: 2px solid transparent;
+        }
+        .tree-item:hover { background-color: var(--hover); }
+        .tree-item.selected {
+            background-color: var(--selection);
+            border-left-color: var(--accent);
+        }
+        .tree-icon { font-size: 14px; }
+        .tree-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tree-children { /* Indent handled by JS */ }
+
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* Settings */
+        .settings-panel { padding: 16px; overflow-y: auto; }
+        .setting-row { margin-bottom: 16px; }
+        .setting-row label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+        .slider-row { display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex: 1; }
+
+        /* Editor Area */
+        #editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg);
+            overflow: hidden;
+        }
+        #editor-header {
+            height: 40px;
+            background-color: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+        #file-status { color: var(--muted); font-size: 12px; }
+        #file-status.dirty { color: var(--accent); }
+        #file-status.error { color: var(--error); }
+
+        #markdown-toolbar {
+            background-color: var(--panel);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 12px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        #markdown-toolbar button {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--mono-font);
+            font-size: 13px;
+        }
+        #markdown-toolbar button:hover { background: var(--hover); color: var(--text); }
+        #markdown-toolbar .separator { width: 1px; height: 16px; background: var(--border); margin: 0 6px; }
+
+        #find-bar {
+            background-color: var(--panel);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        #find-bar input { max-width: 300px; }
+        #find-count { font-size: 12px; color: var(--muted); min-width: 80px; }
+
+        #editor-splitter {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #editor {
+            flex: 1;
+            background-color: var(--bg);
+            color: var(--text);
+            border: none;
+            padding: 24px;
+            font-family: var(--mono-font);
+            font-size: var(--editor-font-size);
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        #preview {
+            flex: 1;
+            padding: 24px 48px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border);
+            max-width: 860px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Markdown Preview Styles */
+        #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
+            color: var(--text); font-weight: 600; margin: 1.2em 0 0.5em 0; line-height: 1.3;
+        }
+        #preview h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.2em; }
+        #preview h2 { font-size: 1.5em; }
+        #preview h3 { font-size: 1.25em; }
+        #preview p { margin: 0.8em 0; line-height: 1.6; }
+        #preview a { color: var(--accent); text-decoration: none; }
+        #preview a:hover { text-decoration: underline; }
+        #preview code {
+            font-family: var(--mono-font); font-size: 0.92em; background-color: var(--code-bg);
+            border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px;
+        }
+        #preview pre {
+            background-color: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+            padding: 12px 16px; overflow-x: auto; margin: 1em 0;
+        }
+        #preview pre code { background: transparent; border: none; padding: 0; font-size: 0.9em; white-space: pre-wrap; }
+        #preview blockquote {
+            margin: 1em 0; padding: 0.2em 0 0.2em 16px; border-left: 3px solid var(--accent); color: var(--muted);
+        }
+        #preview ul, #preview ol { margin: 0.8em 0; padding-left: 1.6em; }
+        #preview li { margin: 0.3em 0; }
+        #preview table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+        #preview th, #preview td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        #preview th { background-color: var(--panel); font-weight: 600; }
+        #preview img { max-width: 100%; border-radius: 6px; }
+        #preview input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
+        #preview hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    </style>
 </head>
 <body>
 
-  <header class="header">
-    <div class="badge"><span class="dot"></span> v5 · 2025–2026</div>
-    <h1>Activation Lock Helper</h1>
-    <p class="sub">
-      Онлайн-камера, запрос всех разрешений, перезагрузка браузера, выход на главный экран,
-      уведомления, диагностика окружения, проверка CVE-2025-43534, WebGPU/DarkSword surface,
-      вырывание в Safari, WebAuthn, BLE-скан, high-entropy UA. Попапы отключены — всё в лог.
-    </p>
-  </header>
-
-  <main class="grid" role="list">
-
-    <div class="section-label">Базовые</div>
-
-    <button class="btn info" onclick="openShortcutsSafari()" role="listitem">
-      <span class="icon">🌐</span>
-      <span class="label">Открыть Safari</span>
-      <span class="desc">icloud.com/shortcuts</span>
-    </button>
-    <button class="btn info" onclick="openShortcutsApp()" role="listitem">
-      <span class="icon">⚡</span>
-      <span class="label">Открыть Shortcuts</span>
-      <span class="desc">Схема shortcuts://</span>
-    </button>
-    <button class="btn info" onclick="openCameraTrick()" role="listitem">
-      <span class="icon">📷</span>
-      <span class="label">Камера (схема)</span>
-      <span class="desc">camera:// / mobilenotes://</span>
-    </button>
-    <button class="btn info" onclick="openShareSheet()" role="listitem">
-      <span class="icon">📤</span>
-      <span class="label">Поделиться</span>
-      <span class="desc">navigator.share</span>
-    </button>
-    <button class="btn info" onclick="openICloud()" role="listitem">
-      <span class="icon">☁️</span>
-      <span class="label">iCloud.com</span>
-      <span class="desc">Веб-версия в Safari</span>
-    </button>
-    <button class="btn danger" onclick="bufferOverflowWifi()" role="listitem">
-      <span class="icon">💥</span>
-      <span class="label">Переполнение (Wi-Fi)</span>
-      <span class="desc">iOS 10.1–10.1.1, попап</span>
-    </button>
-
-    <div class="section-label">Разрешения и уведомления</div>
-
-    <button class="btn new" onclick="requestAllPermissions()" role="listitem">
-      <span class="icon">🔐</span>
-      <span class="label">Все разрешения</span>
-      <span class="desc">Камера, микрофон, гео, буфер, BT, MIDI, wake lock…</span>
-    </button>
-    <button class="btn new" onclick="requestMediaPermissions()" role="listitem">
-      <span class="icon">🎥</span>
-      <span class="label">Камера / Микрофон</span>
-      <span class="desc">getUserMedia (видео+аудио)</span>
-    </button>
-    <button class="btn new" onclick="sendNotification()" role="listitem">
-      <span class="icon">🔔</span>
-      <span class="label">Показать уведомление</span>
-      <span class="desc">Запрос + new Notification</span>
-    </button>
-
-    <div class="section-label">Камера онлайн</div>
-
-    <div class="camera-card" id="cameraCard">
-      <video id="camStream" autoplay playsinline muted></video>
-      <div class="camera-row">
-        <button onclick="stopCameraStream()">Стоп</button>
-        <button onclick="snapshotCamera()">Снимок в лог</button>
-      </div>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <h1 class="welcome-title">Graphite</h1>
+        <p class="welcome-subtitle">Минимальное локальное хранилище markdown-заметок</p>
+        <button id="btn-open-vault" class="welcome-btn">Открыть папку</button>
+        <p class="welcome-note">Требуется современный браузер (Chrome, Edge, Opera) для работы с локальными файлами</p>
     </div>
 
-    <button class="btn new" onclick="startCameraStream()" role="listitem">
-      <span class="icon">🎬</span>
-      <span class="label">Онлайн-камера</span>
-      <span class="desc">Живой видеопоток в странице</span>
-    </button>
+    <!-- Main App -->
+    <div id="main-app">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div class="sidebar-header">Graphite</div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="files">Файлы</button>
+                <button class="tab-btn" data-tab="search">Поиск</button>
+                <button class="tab-btn" data-tab="settings">Настройки</button>
+            </div>
 
-    <div class="section-label">Перезагрузка / главный экран</div>
+            <div class="tab-content" id="tab-files">
+                <div class="action-row">
+                    <button id="btn-new-note" title="Ctrl+N">+ Заметка</button>
+                    <button id="btn-new-folder">+ Папка</button>
+                    <button id="btn-refresh">Обновить</button>
+                </div>
+                <div class="tree-container" id="file-tree"></div>
+            </div>
 
-    <button class="btn warn" onclick="tryReloadBrowser()" role="listitem">
-      <span class="icon">🔁</span>
-      <span class="label">Перезагрузить браузер</span>
-      <span class="desc">reload / href / history.go(0)</span>
-    </button>
-    <button class="btn warn" onclick="tryGoHome()" role="listitem">
-      <span class="icon">🏠</span>
-      <span class="label">На главный экран</span>
-      <span class="desc">window.close / app:// / home://</span>
-    </button>
+            <div class="tab-content" id="tab-search" style="display: none;">
+                <div class="search-row">
+                    <input type="text" id="search-input" placeholder="Поиск по имени...">
+                </div>
+                <div class="tree-container" id="search-tree"></div>
+            </div>
 
-    <div class="section-label">Расширенные векторы</div>
+            <div class="tab-content" id="tab-settings" style="display: none;">
+                <div class="settings-panel">
+                    <div class="setting-row">
+                        <label>Тема оформления</label>
+                        <select id="setting-theme">
+                            <option value="Graphite Dark">Graphite Dark</option>
+                            <option value="Midnight">Midnight</option>
+                            <option value="Nord">Nord</option>
+                            <option value="Sepia Light">Sepia Light</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <label>Размер шрифта редактора</label>
+                        <div class="slider-row">
+                            <input type="range" id="setting-font-size" min="10" max="24" value="14">
+                            <span id="font-size-val">14px</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label>Перенос строк</label>
+                        <input type="checkbox" id="setting-wrap" checked>
+                    </div>
+                </div>
+            </div>
 
-    <button class="btn warn" onclick="checkActivationLockCVE()" role="listitem">
-      <span class="icon">🔓</span>
-      <span class="label">CVE-2025-43534</span>
-      <span class="desc">Проверка версии iOS на уязвимость</span>
-    </button>
-    <button class="btn info" onclick="checkWebGPUSurface()" role="listitem">
-      <span class="icon">🧬</span>
-      <span class="label">WebGPU / DarkSword</span>
-      <span class="desc">Проверка поверхности атаки</span>
-    </button>
-    <button class="btn info" onclick="openInSafari()" role="listitem">
-      <span class="icon">🧭</span>
-      <span class="label">Вырваться в Safari</span>
-      <span class="desc">x-safari / legacy scheme</span>
-    </button>
-    <button class="btn info" onclick="testShortcutsScheme()" role="listitem">
-      <span class="icon">⚡</span>
-      <span class="label">Проверить Shortcuts</span>
-      <span class="desc">shortcuts://</span>
-    </button>
-    <button class="btn info" onclick="listDevices()" role="listitem">
-      <span class="icon">🎛️</span>
-      <span class="label">Устройства ввода</span>
-      <span class="desc">enumerateDevices</span>
-    </button>
-    <button class="btn info" onclick="checkStorageAccess()" role="listitem">
-      <span class="icon">📦</span>
-      <span class="label">Storage Access</span>
-      <span class="desc">hasStorageAccess / request</span>
-    </button>
-    <button class="btn info" onclick="checkWebAuthn()" role="listitem">
-      <span class="icon">🪪</span>
-      <span class="label">WebAuthn</span>
-      <span class="desc">Face ID / Touch ID</span>
-    </button>
-    <button class="btn info" onclick="highEntropyUA()" role="listitem">
-      <span class="icon">📡</span>
-      <span class="label">High-Entropy UA</span>
-      <span class="desc">Точная версия платформы</span>
-    </button>
-    <button class="btn info" onclick="watchBluetoothAdvertisements()" role="listitem">
-      <span class="icon">📶</span>
-      <span class="label">BLE Advertisements</span>
-      <span class="desc">requestLEScan (5 сек)</span>
-    </button>
-    <button class="btn info" onclick="checkScreenDetails()" role="listitem">
-      <span class="icon">🖥️</span>
-      <span class="label">Screen Details</span>
-      <span class="desc">getScreenDetails</span>
-    </button>
+            <div class="sidebar-footer">
+                <div id="note-count">0 заметок</div>
+                <div id="vault-path">Хранилище не выбрано</div>
+            </div>
+        </div>
 
-    <div class="section-label">Диагностика и окружение</div>
+        <!-- Editor Area -->
+        <div id="editor-area">
+            <div id="editor-header">
+                <span id="file-name">Без названия</span>
+                <span id="file-status"></span>
+            </div>
+            
+            <div id="find-bar" style="display: none;">
+                <input type="text" id="find-input" placeholder="Поиск в заметке...">
+                <span id="find-count"></span>
+                <button onclick="app.findPrev()">←</button>
+                <button onclick="app.findNext()">→</button>
+                <button onclick="app.hideFind()">✕</button>
+            </div>
 
-    <button class="btn info" onclick="showDiagnostics()" role="listitem">
-      <span class="icon">📊</span>
-      <span class="label">Диагностика</span>
-      <span class="desc">UA, платформа, разрешения, состояние</span>
-    </button>
-    <button class="btn info" onclick="copyDiagnostics()" role="listitem">
-      <span class="icon">📋</span>
-      <span class="label">Скопировать диагностику</span>
-      <span class="desc">В буфер обмена</span>
-    </button>
-    <button class="btn info" onclick="toggleFullscreen()" role="listitem">
-      <span class="icon">⛶</span>
-      <span class="label">Полный экран</span>
-      <span class="desc">requestFullscreen</span>
-    </button>
-    <button class="btn info" onclick="vibrateDevice()" role="listitem">
-      <span class="icon">📳</span>
-      <span class="label">Вибрация</span>
-      <span class="desc">navigator.vibrate</span>
-    </button>
-    <button class="btn info" onclick="requestWakeLock()" role="listitem">
-      <span class="icon">💡</span>
-      <span class="label">Wake Lock</span>
-      <span class="desc">Не гасить экран</span>
-    </button>
-    <button class="btn info" onclick="lockOrientation()" role="listitem">
-      <span class="icon">🔄</span>
-      <span class="label">Ориентация</span>
-      <span class="desc">screen.orientation.lock</span>
-    </button>
-    <button class="btn info" onclick="requestGeo()" role="listitem">
-      <span class="icon">📍</span>
-      <span class="label">Геолокация</span>
-      <span class="desc">getCurrentPosition</span>
-    </button>
-    <button class="btn info" onclick="readClipboard()" role="listitem">
-      <span class="icon">📋</span>
-      <span class="label">Читать буфер</span>
-      <span class="desc">clipboard.readText</span>
-    </button>
-    <button class="btn info" onclick="persistStorage()" role="listitem">
-      <span class="icon">💾</span>
-      <span class="label">Persistent Storage</span>
-      <span class="desc">navigator.storage.persist</span>
-    </button>
-    <button class="btn info" onclick="testWindowOpen()" role="listitem">
-      <span class="icon">🪟</span>
-      <span class="label">window.open</span>
-      <span class="desc">Тест блокировки всплывающих</span>
-    </button>
+            <div id="markdown-toolbar">
+                <button onclick="app.wrapSelection('**')" title="Полужирный (Ctrl+B)"><b>B</b></button>
+                <button onclick="app.wrapSelection('*')" title="Курсив (Ctrl+I)"><i>I</i></button>
+                <button onclick="app.wrapSelection('~~')" title="Зачёркнутый"><s>S</s></button>
+                <button onclick="app.wrapSelection('`')" title="Код">&lt;/&gt;</button>
+                <span class="separator"></span>
+                <button onclick="app.toggleLinePrefix('# ')">H1</button>
+                <button onclick="app.toggleLinePrefix('## ')">H2</button>
+                <button onclick="app.toggleLinePrefix('### ')">H3</button>
+                <span class="separator"></span>
+                <button onclick="app.toggleLinePrefix('- ')">•</button>
+                <button onclick="app.toggleLinePrefix('1. ')">1.</button>
+                <button onclick="app.toggleLinePrefix('> ')">"</button>
+                <span class="separator"></span>
+                <button onclick="app.insertLink()">🔗</button>
+                <button onclick="app.insertImage()">🖼</button>
+            </div>
 
-  </main>
-
-  <div class="status" id="status" role="status" aria-live="polite"></div>
-
-  <section class="console" id="console">
-    <div class="head">
-      <span>Лог событий</span>
-      <button onclick="clearLog()">Очистить</button>
+            <div id="editor-splitter">
+                <textarea id="editor" spellcheck="false" placeholder="Начните писать..."></textarea>
+                <div id="preview"></div>
+            </div>
+        </div>
     </div>
-    <div id="logBody"></div>
-  </section>
 
-  <footer class="footer">
-    Не является официальным обходом Activation Lock. Используйте только на своём
-    устройстве или с разрешения владельца. Многие векторы требуют конкретных
-    версий iOS и закрыты в актуальных сборках.
-  </footer>
+    <script>
+        marked.setOptions({ gfm: true, breaks: true });
 
-  <script>
-    /* ============================================================
-       ЛОГ И СТАТУС
-       ============================================================ */
-    const statusEl = document.getElementById('status');
-    const logBody  = document.getElementById('logBody');
-    let statusTimer = null;
+        class VaultManager {
+            constructor() {
+                this.rootHandle = null;
+                this.files = new Map(); 
+            }
 
-    function setStatus(msg, isError = false) {
-      if (statusTimer) clearTimeout(statusTimer);
-      statusEl.textContent = msg;
-      statusEl.classList.add('visible');
-      statusEl.classList.toggle('error', isError);
-      statusTimer = setTimeout(() => {
-        statusEl.classList.remove('visible', 'error');
-        statusTimer = null;
-      }, 5000);
-    }
+            async open() {
+                try {
+                    this.rootHandle = await window.showDirectoryPicker();
+                    this.files.clear();
+                    await this.scanDirectory(this.rootHandle, "");
+                    return true;
+                } catch (e) {
+                    console.error(e);
+                    return false;
+                }
+            }
 
-    function log(msg, kind = '') {
-      const line = document.createElement('div');
-      line.className = 'line ' + kind;
-      const t = document.createElement('span');
-      t.className = 't';
-      t.textContent = new Date().toLocaleTimeString('ru-RU', { hour12: false });
-      line.appendChild(t);
-      line.appendChild(document.createTextNode(msg));
-      logBody.appendChild(line);
-      logBody.parentElement.scrollTop = logBody.parentElement.scrollHeight;
-      if (logBody.childElementCount > 300) logBody.removeChild(logBody.firstChild);
-    }
-
-    function clearLog() { logBody.innerHTML = ''; }
-    function ok(m)   { log(m, 'ok');   setStatus(m); }
-    function err(m)  { log(m, 'err');  setStatus(m, true); }
-    function warn(m) { log(m, 'warn'); setStatus(m); }
-    function info(m) { log(m, 'info'); }
-
-    /* ============================================================
-       БАЗОВЫЕ ВЕКТОРЫ
-       ============================================================ */
-    function openShortcutsSafari() {
-      info('Переход на icloud.com/shortcuts');
-      try { window.location.href = 'https://www.icloud.com/shortcuts'; ok('Открываю icloud.com/shortcuts…'); }
-      catch (e) { err('Не удалось открыть ссылку: ' + e.message); }
-    }
-    function openShortcutsApp() {
-      info('Схема shortcuts://');
-      try { window.location.href = 'shortcuts://'; ok('Запускаю Shortcuts…'); }
-      catch (e) { err('Shortcuts не запустились: ' + e.message); }
-    }
-    function openCameraTrick() {
-      info('Пробую camera:// → mobilenotes://');
-      try { window.location.href = 'camera://'; ok('Пробую camera://…'); }
-      catch (e) {
-        try { window.location.href = 'mobilenotes://'; ok('Открываю Заметки…'); }
-        catch (e2) { err('Не удалось открыть схему'); }
-      }
-    }
-    async function openShareSheet() {
-      if (!navigator.share) { err('Share Sheet недоступен'); return; }
-      try {
-        await navigator.share({ title: 'Activation Lock Helper', text: 'Попытка доступа', url: location.href });
-        ok('Share Sheet открыт');
-      } catch (e) { warn('Share отменён или недоступен: ' + e.name); }
-    }
-    function openICloud() {
-      info('Переход на icloud.com');
-      try { window.location.href = 'https://www.icloud.com'; ok('Открываю iCloud.com…'); }
-      catch (e) { err('Не удалось открыть iCloud'); }
-    }
-
-    async function bufferOverflowWifi() {
-      info('Копирую 100000 символов в буфер');
-      const huge = 'A'.repeat(100000);
-      try {
-        await navigator.clipboard.writeText(huge);
-        ok('100 000 символов скопированы.');
-      } catch (e) {
-        err('Не удалось скопировать: ' + e.name);
-      }
-      alert('Вставьте скопированный текст в поля «Имя», «Пользователь» и «Пароль» на экране Wi-Fi.');
-    }
-
-    /* ============================================================
-       ВСЕ РАЗРЕШЕНИЯ
-       ============================================================ */
-    const permNames = [
-      'camera', 'microphone', 'geolocation', 'notifications',
-      'clipboard-read', 'clipboard-write', 'persistent-storage',
-      'bluetooth', 'midi', 'screen-wake-lock', 'background-sync',
-      'accelerometer', 'gyroscope', 'magnetometer',
-      'payment-handler', 'push', 'storage-access', 'top-level-storage-access'
-    ];
-
-    async function requestAllPermissions() {
-      info('=== Запрос всех разрешений ===');
-      let okCount = 0, failCount = 0;
-
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        s.getTracks().forEach(t => t.stop());
-        ok('camera/microphone: получено');
-        okCount++;
-      } catch (e) { warn('camera/microphone: ' + e.name); failCount++; }
-
-      if (navigator.geolocation) {
-        await new Promise(res => {
-          navigator.geolocation.getCurrentPosition(
-            () => { ok('geolocation: получено'); okCount++; res(); },
-            e => { warn('geolocation: ' + (e.message || 'ошибка')); failCount++; res(); },
-            { timeout: 8000, maximumAge: 60000 }
-          );
-        });
-      } else { warn('geolocation: не поддерживается'); failCount++; }
-
-      if ('Notification' in window) {
-        try {
-          const p = await Notification.requestPermission();
-          if (p === 'granted') { ok('notifications: granted'); okCount++; }
-          else { warn('notifications: ' + p); failCount++; }
-        } catch (e) { warn('notifications: ' + e.name); failCount++; }
-      }
-
-      try {
-        await navigator.clipboard.writeText('ALH-perm-test');
-        ok('clipboard-write: получено'); okCount++;
-      } catch (e) { warn('clipboard-write: ' + e.name); failCount++; }
-
-      try {
-        await navigator.clipboard.readText();
-        ok('clipboard-read: получено'); okCount++;
-      } catch (e) { warn('clipboard-read: ' + e.name); failCount++; }
-
-      if (navigator.storage && navigator.storage.persist) {
-        try {
-          const granted = await navigator.storage.persist();
-          if (granted) { ok('persistent-storage: granted'); okCount++; }
-          else { warn('persistent-storage: denied'); failCount++; }
-        } catch (e) { warn('persistent-storage: ' + e.name); failCount++; }
-      }
-
-      if (navigator.bluetooth && navigator.bluetooth.requestDevice) {
-        try {
-          await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-          ok('bluetooth: устройство выбрано'); okCount++;
-        } catch (e) { warn('bluetooth: ' + e.name); failCount++; }
-      } else { warn('bluetooth: не поддерживается'); failCount++; }
-
-      if (navigator.requestMIDIAccess) {
-        try { await navigator.requestMIDIAccess(); ok('midi: получено'); okCount++; }
-        catch (e) { warn('midi: ' + e.name); failCount++; }
-      } else { warn('midi: не поддерживается'); failCount++; }
-
-      if ('wakeLock' in navigator) {
-        try {
-          const wl = await navigator.wakeLock.request('screen');
-          await wl.release();
-          ok('wake-lock: получено'); okCount++;
-        } catch (e) { warn('wake-lock: ' + e.name); failCount++; }
-      } else { warn('wake-lock: не поддерживается'); failCount++; }
-
-      if (screen.orientation && screen.orientation.lock) {
-        try { await screen.orientation.lock('portrait'); ok('orientation: locked'); okCount++; }
-        catch (e) { warn('orientation: ' + e.name); failCount++; }
-      }
-
-      if (navigator.permissions && navigator.permissions.query) {
-        for (const name of permNames) {
-          try {
-            const st = await navigator.permissions.query({ name });
-            info('permissions.query ' + name + ' → ' + st.state);
-          } catch (e) {
-            info('permissions.query ' + name + ' → n/a (' + e.name + ')');
-          }
+            async scanDirectory(dirHandle, path) {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.name.startsWith('.')) continue;
+                    const entryPath = path ? `${path}/${entry.name}` : entry.name;
+                    
+                    if (entry.kind === 'directory') {
+                        this.files.set(entryPath, { handle: entry, isDir: true, name: entry.name });
+                        await this.scanDirectory(entry, entryPath);
+                    } else if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.md')) {
+                        this.files.set(entryPath, { handle: entry, isDir: false, name: entry.name });
+                    }
+                }
+            }
+            
+            async readFile(path) {
+                const entry = this.files.get(path);
+                if (!entry || entry.isDir) return "";
+                const file = await entry.handle.getFile();
+                return await file.text();
+            }
+            
+            async writeFile(path, content) {
+                const entry = this.files.get(path);
+                if (!entry || entry.isDir) return;
+                const writable = await entry.handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+            }
+            
+            async createNote(parentPath, name = "Новая заметка") {
+                const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
+                let fileName = name.endsWith('.md') ? name : `${name}.md`;
+                
+                let count = 1;
+                let finalName = fileName;
+                let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                while (this.files.has(testPath)) {
+                    const ext = fileName.substring(fileName.lastIndexOf('.'));
+                    const base = fileName.substring(0, fileName.lastIndexOf('.'));
+                    finalName = `${base} ${count}${ext}`;
+                    testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                    count++;
+                }
+                
+                const fileHandle = await parentEntry.getFileHandle(finalName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(`# ${finalName.replace('.md', '')}\n\n`);
+                await writable.close();
+                
+                const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                this.files.set(newPath, { handle: fileHandle, isDir: false, name: finalName });
+                return newPath;
+            }
+            
+            async createFolder(parentPath, name = "Новая папка") {
+                const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
+                let finalName = name;
+                let count = 1;
+                let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                while (this.files.has(testPath)) {
+                    finalName = `${name} ${count}`;
+                    testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                    count++;
+                }
+                
+                const dirHandle = await parentEntry.getDirectoryHandle(finalName, { create: true });
+                const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+                this.files.set(newPath, { handle: dirHandle, isDir: true, name: finalName });
+                return newPath;
+            }
         }
-      } else { warn('permissions.query: не поддерживается'); }
 
-      info('Итог: ok=' + okCount + ', fail=' + failCount);
-      if (okCount > 0) setStatus('Разрешения обработаны: ok=' + okCount + ', fail=' + failCount);
-      else setStatus('Не удалось получить ни одного разрешения', true);
-    }
+        class GraphiteApp {
+            constructor() {
+                this.vault = new VaultManager();
+                this.currentFilePath = null;
+                this.isDirty = false;
+                this.saveTimeout = null;
+                this.renderTimeout = null;
+                this.currentTab = 'files';
+                this.expandedPaths = new Set();
+                
+                this.initUI();
+                this.loadSettings();
+                this.bindEvents();
+            }
 
-    async function requestMediaPermissions() {
-      if (!navigator.mediaDevices?.getUserMedia) { err('getUserMedia не поддерживается'); return; }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        stream.getTracks().forEach(t => t.stop());
-        ok('Камера/микрофон: разрешение получено (треки остановлены)');
-      } catch (err1) {
-        warn('Камера/микрофон: ' + err1.name);
-        try {
-          const a = await navigator.mediaDevices.getUserMedia({ audio: true });
-          a.getTracks().forEach(t => t.stop());
-          ok('Микрофон: разрешение получено');
-        } catch (err2) { err('Разрешения не получены: ' + err1.name); }
-      }
-    }
+            initUI() {
+                this.welcomeScreen = document.getElementById('welcome-screen');
+                this.mainApp = document.getElementById('main-app');
+                this.editor = document.getElementById('editor');
+                this.preview = document.getElementById('preview');
+                this.fileNameEl = document.getElementById('file-name');
+                this.fileStatusEl = document.getElementById('file-status');
+                this.fileTreeEl = document.getElementById('file-tree');
+                this.searchTreeEl = document.getElementById('search-tree');
+                this.noteCountEl = document.getElementById('note-count');
+                this.vaultPathEl = document.getElementById('vault-path');
+            }
 
-    /* ============================================================
-       УВЕДОМЛЕНИЕ ЧЕРЕЗ РАЗРЕШЕНИЕ
-       ============================================================ */
-    async function sendNotification() {
-      if (!('Notification' in window)) { err('Notification API не поддерживается'); return; }
-      let p = Notification.permission;
-      if (p === 'default') {
-        try { p = await Notification.requestPermission(); }
-        catch (e) { err('Запрос уведомлений: ' + e.name); return; }
-      }
-      if (p !== 'granted') { err('Уведомления запрещены (' + p + ')'); return; }
-      try {
-        const n = new Notification('Activation Lock Helper', {
-          body: 'Уведомление через разрешение в ' + new Date().toLocaleTimeString('ru-RU'),
-          tag: 'alh-notify',
-          silent: false
-        });
-        n.onclick = () => { info('Уведомление нажато'); window.focus(); };
-        n.onshow  = () => info('Уведомление показано');
-        n.onclose = () => info('Уведомление закрыто');
-        n.onerror = () => err('Ошибка уведомления');
-        ok('Уведомление отправлено');
-      } catch (e) { err('Notification: ' + e.message); }
-    }
+            bindEvents() {
+                document.getElementById('btn-open-vault').addEventListener('click', () => this.openVault());
+                document.getElementById('btn-new-note').addEventListener('click', () => this.createNote());
+                document.getElementById('btn-new-folder').addEventListener('click', () => this.createFolder());
+                document.getElementById('btn-refresh').addEventListener('click', () => this.refreshTree());
+                
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+                });
 
-    /* ============================================================
-       ОНЛАЙН-КАМЕРА
-       ============================================================ */
-    let cameraStream = null;
-    const cameraCard = document.getElementById('cameraCard');
-    const camVideo   = document.getElementById('camStream');
+                this.editor.addEventListener('input', () => this.onEditorInput());
+                document.getElementById('search-input').addEventListener('input', (e) => this.refreshTree(e.target.value));
+                document.getElementById('find-input').addEventListener('input', () => this.updateFindCount());
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 's') { e.preventDefault(); this.saveCurrent(); }
+                        else if (e.key === 'b') { e.preventDefault(); this.wrapSelection('**'); }
+                        else if (e.key === 'i') { e.preventDefault(); this.wrapSelection('*'); }
+                        else if (e.key === 'f') { e.preventDefault(); this.showFind(); }
+                    } else if (e.key === 'Escape') {
+                        this.hideFind();
+                    }
+                });
 
-    async function startCameraStream() {
-      if (cameraStream) { info('Поток уже запущен'); return; }
-      if (!navigator.mediaDevices?.getUserMedia) { err('getUserMedia не поддерживается'); return; }
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-          audio: false
-        });
-        camVideo.srcObject = cameraStream;
-        cameraCard.classList.add('active');
-        const track = cameraStream.getVideoTracks()[0];
-        const s = track.getSettings();
-        ok('Онлайн-камера запущена: ' + (s.width||'?') + 'x' + (s.height||'?'));
-        track.onended = () =>
+                document.getElementById('setting-theme').addEventListener('change', (e) => this.applyTheme(e.target.value));
+                document.getElementById('setting-font-size').addEventListener('input', (e) => {
+                    const size = e.target.value;
+                    document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
+                    document.getElementById('font-size-val').textContent = `${size}px`;
+                    localStorage.setItem('fontSize', size);
+                });
+                document.getElementById('setting-wrap').addEventListener('change', (e) => {
+                    this.editor.style.whiteSpace = e.target.checked ? 'pre-wrap' : 'pre';
+                    this.editor.style.overflowX = e.target.checked ? 'hidden' : 'auto';
+                    localStorage.setItem('wrap', e.target.checked);
+                });
+            }
+
+            async openVault() {
+                if (!('showDirectoryPicker' in window)) {
+                    alert("Ваш браузер не поддерживает File System Access API.\nПожалуйста, используйте Chrome, Edge или Opera.");
+                    return;
+                }
+                
+                const success = await this.vault.open();
+                if (success) {
+                    this.welcomeScreen.style.display = 'none';
+                    this.mainApp.classList.add('active');
+                    this.vaultPathEl.textContent = this.vault.rootHandle.name;
+                    this.refreshTree();
+                }
+            }
+
+            switchTab(tab) {
+                this.currentTab = tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+                document.getElementById('tab-files').style.display = tab === 'files' ? 'flex' : 'none';
+                document.getElementById('tab-search').style.display = tab === 'search' ? 'flex' : 'none';
+                document.getElementById('tab-settings').style.display = tab === 'settings' ? 'flex' : 'none';
+                if (tab === 'search') document.getElementById('search-input').focus();
+            }
+
+            async openNote(path) {
+                if (this.currentFilePath === path) return;
+                
+                if (this.isDirty) {
+                    if (!confirm("Есть несохранённые изменения. Сохранить?")) {
+                        this.isDirty = false;
+                    } else {
+                        await this.saveCurrent();
+                    }
+                }
+                
+                try {
+                    const content = await this.vault.readFile(path);
+                    this.editor.value = content;
+                    this.currentFilePath = path;
+                    this.fileNameEl.textContent = path.split('/').pop();
+                    this.isDirty = false;
+                    this.setStatus("Сохранено");
+                    this.updatePreview();
+                    this.refreshTree();
+                } catch (e) {
+                    console.error(e);
+                    alert("Ошибка чтения файла");
+                }
+            }
+
+            onEditorInput() {
+                this.isDirty = true;
+                this.setStatus("Изменено...", "dirty");
+                
+                clearTimeout(this.renderTimeout);
+                this.renderTimeout = setTimeout(() => this.updatePreview(), 300);
+                
+                clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(() => this.saveCurrent(), 1500);
+            }
+
+            async saveCurrent() {
+                if (!this.currentFilePath || !this.isDirty) return;
+                
+                this.setStatus("Сохранение...", "dirty");
+                try {
+                    await this.vault.writeFile(this.currentFilePath, this.editor.value);
+                    this.isDirty = false;
+                    this.setStatus("Сохранено");
+                } catch (e) {
+                    console.error(e);
+                    this.setStatus("Ошибка сохранения", "error");
+                }
+            }
+
+            setStatus(text, cls = "") {
+                this.fileStatusEl.textContent = text;
+                this.fileStatusEl.className = cls;
+            }
+
+            updatePreview() {
+                const md = this.editor.value;
+                let html = marked.parse(md);
+                html = html.replace(/<li>\s*\[\s\]\s*/g, '<li><input type="checkbox" disabled> ');
+                html = html.replace(/<li>\s*\[x\]\s*/gi, '<li><input type="checkbox" checked disabled> ');
+                this.preview.innerHTML = html;
+            }
+
+            refreshTree(query = "") {
+                const treeContainer = this.currentTab === 'search' ? this.searchTreeEl : this.fileTreeEl;
+                treeContainer.innerHTML = '';
+                
+                const root = { name: 'root', children: [], isDir: true };
+                const nodes = { "": root };
+                
+                const sortedPaths = Array.from(this.vault.files.keys()).sort();
+                
+                for (const path of sortedPaths) {
+                    const entry = this.vault.files.get(path);
+                    if (query && !entry.isDir) {
+                        if (!entry.name.toLowerCase().includes(query.toLowerCase())) continue;
+                    }
+                    
+                    const parts = path.split('/');
+                    let currentParent = root;
+                    let currentPath = "";
+                    
+                    for (let i = 0; i < parts.length; i++) {
+                        const part = parts[i];
+                        currentPath = currentPath ? `${currentPath}/${part}` : part;
+                        
+                        if (!nodes[currentPath]) {
+                            const isDir = i < parts.length - 1; 
+                            const node = { name: part, path: currentPath, isDir: isDir, children: [] };
+                            nodes[currentPath] = node;
+                            currentParent.children.push(node);
+                        }
+                        currentParent = nodes[currentPath];
+                    }
+                }
+                
+                treeContainer.appendChild(this.buildTreeDOM(root));
+                
+                let count = 0;
+                for (const entry of this.vault.files.values()) {
+                    if (!entry.isDir) count++;
+                }
+                this.noteCountEl.textContent = `${count} ${this.pluralize(count, ['заметка', 'заметки', 'заметок'])}`;
+            }
+
+            buildTreeDOM(node, depth = 0) {
+                const fragment = document.createDocumentFragment();
+                
+                if (node.name !== 'root') {
+                    const item = document.createElement('div');
+                    item.className = 'tree-item ' + (node.isDir ? 'is-dir' : 'is-file');
+                    if (this.currentFilePath === node.path) item.classList.add('selected');
+                    
+                    item.style.paddingLeft = `${depth * 16 + 8}px`;
+                    item.dataset.path = node.path;
+                    
+                    const icon = document.createElement('span');
+                    icon.className = 'tree-icon';
+                    icon.textContent = node.isDir ? '📁' : '📄';
+                    
+                    const label = document.createElement('span');
+                    label.className = 'tree-label';
+                    label.textContent = node.name;
+                    
+                    item.appendChild(icon);
+                    item.appendChild(label);
+                    
+                    if (!node.isDir) {
+                        item.addEventListener('click', () => this.openNote(node.path));
+                    } else {
+                        item.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const isExpanded = item.classList.toggle('expanded');
+                            if (isExpanded) this.expandedPaths.add(node.path);
+                            else this.expandedPaths.delete(node.path);
+                            
+                            const childrenContainer = item.nextElementSibling;
+                            if (childrenContainer) {
+                                childrenContainer.style.display = isExpanded ? 'block' : 'none';
+                            }
+                        });
+                        
+                        if (this.expandedPaths.has(node.path)) {
+                            item.classList.add('expanded');
+                        }
+                    }
+                    fragment.appendChild(item);
+                }
+                
+                if (node.children.length > 0) {
+                    const childrenContainer = document.createElement('div');
+                    childrenContainer.className = 'tree-children';
+                    if (node.name !== 'root' && !this.expandedPaths.has(node.path)) {
+                        childrenContainer.style.display = 'none';
+                    }
+                    node.children.forEach(child => {
+                        childrenContainer.appendChild(this.buildTreeDOM(child, depth + 1));
+                    });
+                    fragment.appendChild(childrenContainer);
+                }
+                
+                return fragment;
+            }
+
+            pluralize(n, forms) {
+                n = Math.abs(n);
+                const n10 = n % 10;
+                const n100 = n % 100;
+                if (n10 === 1 && n100 !== 11) return forms[0];
+                if (n10 >= 2 && n10 <= 4 && (n100 < 11 || n100 > 14)) return forms[1];
+                return forms[2];
+            }
+
+            async createNote() {
+                const name = prompt("Имя новой заметки:", "Новая заметка");
+                if (!name) return;
+                
+                let parentPath = null;
+                const selected = document.querySelector('.tree-item.selected');
+                if (selected) {
+                    const path = selected.dataset.path;
+                    const entry = this.vault.files.get(path);
+                    if (entry && entry.isDir) parentPath = path;
+                    else if (path.includes('/')) parentPath = path.substring(0, path.lastIndexOf('/'));
+                }
+                
+                try {
+                    const path = await this.vault.createNote(parentPath, name);
+                    this.refreshTree();
+                    this.openNote(path);
+                } catch (e) {
+                    console.error(e);
+                    alert("Ошибка создания заметки");
+                }
+            }
+
+            async createFolder() {
+                const name = prompt("Имя новой папки:", "Новая папка");
+                if (!name) return;
+                
+                let parentPath = null;
+                const selected = document.querySelector('.tree-item.selected');
+                if (selected) {
+                    const path = selected.dataset.path;
+                    const entry = this.vault.files.get(path);
+                    if (entry && entry.isDir) parentPath = path;
+                    else if (path.includes('/')) parentPath = path.substring(0, path.lastIndexOf('/'));
+                }
+                
+                try {
+                    await this.vault.createFolder(parentPath, name);
+                    this.refreshTree();
+                } catch (e) {
+                    console.error(e);
+                    alert("Ошибка создания папки");
+                }
+            }
+
+            showFind() {
+                document.getElementById('find-bar').style.display = 'flex';
+                document.getElementById('find-input').focus();
+            }
+
+            hideFind() {
+                document.getElementById('find-bar').style.display = 'none';
+            }
+
+            findNext() {
+                const query = document.getElementById('find-input').value;
+                if (!query) return;
+                const text = this.editor.value;
+                const start = this.editor.selectionEnd;
+                let index = text.toLowerCase().indexOf(query.toLowerCase(), start);
+                if (index === -1) index = text.toLowerCase().indexOf(query.toLowerCase());
+                if (index !== -1) {
+                    this.editor.selectionStart = index;
+                    this.editor.selectionEnd = index + query.length;
+                    this.editor.focus();
+                }
+            }
+
+            findPrev() {
+                const query = document.getElementById('find-input').value;
+                if (!query) return;
+                const text = this.editor.value;
+                const start = this.editor.selectionStart;
+                let index = text.toLowerCase().lastIndexOf(query.toLowerCase(), start - 1);
+                if (index === -1) index = text.toLowerCase().lastIndexOf(query.toLowerCase());
+                if (index !== -1) {
+                    this.editor.selectionStart = index;
+                    this.editor.selectionEnd = index + query.length;
+                    this.editor.focus();
+                }
+            }
+
+            updateFindCount() {
+                const query = document.getElementById('find-input').value.toLowerCase();
+                if (!query) {
+                    document.getElementById('find-count').textContent = "";
+                    return;
+                }
+                const text = this.editor.value.toLowerCase();
+                let count = 0;
+                let pos = 0;
+                while ((pos = text.indexOf(query, pos)) !== -1) {
+                    count++;
+                    pos += query.length;
+                }
+                document.getElementById('find-count').textContent = count > 0 ? `${count} совпадений` : "нет совпадений";
+            }
+
+            wrapSelection(mark) {
+                const start = this.editor.selectionStart;
+                const end = this.editor.selectionEnd;
+                const text = this.editor.value;
+                const selected = text.substring(start, end);
+                
+                this.editor.value = text.substring(0, start) + mark + selected + mark + text.substring(end);
+                
+                if (selected.length === 0) {
+                    this.editor.selectionStart = this.editor.selectionEnd = start + mark.length;
+                } else {
+                    this.editor.selectionStart = start + mark.length;
+                    this.editor.selectionEnd = end + mark.length;
+                }
+                this.editor.focus();
+                this.editor.dispatchEvent(new Event('input'));
+            }
+
+            toggleLinePrefix(prefix) {
+                const start = this.editor.selectionStart;
+                const text = this.editor.value;
+                
+                let lineStart = text.lastIndexOf('\n', start - 1) + 1;
+                let lineEnd = text.indexOf('\n', start);
+                if (lineEnd === -1) lineEnd = text.length;
+                
+                const line = text.substring(lineStart, lineEnd);
+                const newLine = line.startsWith(prefix) ? line.substring(prefix.length) : prefix + line;
+                
+                this.editor.value = text.substring(0, lineStart) + newLine + text.substring(lineEnd);
+                this.editor.selectionStart = this.editor.selectionEnd = lineStart + newLine.length;
+                this.editor.focus();
+                this.editor.dispatchEvent(new Event('input'));
+            }
+
+            insertLink() {
+                const start = this.editor.selectionStart;
+                const end = this.editor.selectionEnd;
+                const text = this.editor.value;
+                const selected = text.substring(start, end) || "текст";
+                
+                const insertion = `[${selected}](url)`;
+                this.editor.value = text.substring(0, start) + insertion + text.substring(end);
+                
+                const urlStart = start + selected.length + 3;
+                this.editor.selectionStart = urlStart;
+                this.editor.selectionEnd = urlStart + 3;
+                this.editor.focus();
+                this.editor.dispatchEvent(new Event('input'));
+            }
+
+            insertImage() {
+                const start = this.editor.selectionStart;
+                const end = this.editor.selectionEnd;
+                const text = this.editor.value;
+                const selected = text.substring(start, end) || "alt";
+                
+                const insertion = `![${selected}](url)`;
+                this.editor.value = text.substring(0, start) + insertion + text.substring(end);
+                
+                const urlStart = start + selected.length + 4;
+                this.editor.selectionStart = urlStart;
+                this.editor.selectionEnd = urlStart + 3;
+                this.editor.focus();
+                this.editor.dispatchEvent(new Event('input'));
+            }
+
+            loadSettings() {
+                const theme = localStorage.getItem('theme') || 'Graphite Dark';
+                this.applyTheme(theme);
+                document.getElementById('setting-theme').value = theme;
+                
+                const fontSize = localStorage.getItem('fontSize') || '14';
+                document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
+                document.getElementById('setting-font-size').value = fontSize;
+                document.getElementById('font-size-val').textContent = `${fontSize}px`;
+                
+                const wrap = localStorage.getItem('wrap') !== 'false';
+                document.getElementById('setting-wrap').checked = wrap;
+                this.editor.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
+                this.editor.style.overflowX = wrap ? 'hidden' : 'auto';
+            }
+
+            applyTheme(name) {
+                const themes = {
+                    "Graphite Dark": { bg: "#1e1e1e", panel: "#252526", border: "#333333", text: "#d4d4d4", muted: "#8a8a8a", accent: "#7aa2f7", hover: "#2a2a2a", selection: "#35405a", code_bg: "#2d2d2d", error: "#f7768e" },
+                    "Midnight": { bg: "#0f1419", panel: "#151b23", border: "#232c36", text: "#c0caf5", muted: "#565f89", accent: "#bb9af7", hover: "#1a2230", selection: "#283457", code_bg: "#1a2230", error: "#f7768e" },
+                    "Nord": { bg: "#2e3440", panel: "#3b4252", border: "#434c5e", text: "#d8dee9", muted: "#7b88a1", accent: "#88c0d0", hover: "#434c5e", selection: "#4c566a", code_bg: "#3b4252", error: "#bf616a" },
+                    "Sepia Light": { bg: "#fbf1c7", panel: "#f0e6d2", border: "#d5c4a1", text: "#3c3836", muted: "#7c6f64", accent: "#b58900", hover: "#eee8d5", selection: "#ebdbb2", code_bg: "#f5e8c7", error: "#9d0006" }
+                };
+                
+                const theme = themes[name] || themes["Graphite Dark"];
+                const root = document.documentElement;
+                for (const [key, value] of Object.entries(theme)) {
+                    root.style.setProperty(`--${key}`, value);
+                }
+                localStorage.setItem('theme', name);
+            }
+        }
+
+        const app = new GraphiteApp();
+    </script>
+</body>
+</html>
