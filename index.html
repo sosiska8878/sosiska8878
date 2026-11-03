@@ -1,959 +1,2089 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphite</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        :root {
-            --bg: #1e1e1e;
-            --panel: #252526;
-            --border: #333333;
-            --text: #d4d4d4;
-            --muted: #8a8a8a;
-            --accent: #7aa2f7;
-            --hover: #2a2a2a;
-            --selection: #35405a;
-            --code-bg: #2d2d2d;
-            --error: #f7768e;
-            --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --mono-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-            --editor-font-size: 14px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Graphite</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+    --bg: #1e1e1e; --panel: #252526; --border: #333; --text: #d4d4d4;
+    --muted: #8a8a8a; --accent: #7aa2f7; --hover: #2a2a2a; --selection: #35405a;
+    --code-bg: #2d2d2d; --error: #f7768e; --ok: #9ece6a; --warn: #e0af68;
+    --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    --editor-font-size: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--ui-font); background: var(--bg); color: var(--text); height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ========== Overlays & logo (shared) ========== */
+#onboarding-overlay, .wizard-overlay {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 24px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+#onboarding-overlay { z-index: 2000; background: radial-gradient(circle at 20% 10%, rgba(122,162,247,.2), rgba(15,15,20,.95)); }
+.wizard-overlay { z-index: 2100; background: rgba(10,10,14,.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.onboarding-card, .wizard-card {
+    background: linear-gradient(180deg, var(--panel), var(--bg));
+    border: 1px solid var(--border); width: 100%;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55);
+    animation: obRise .45s cubic-bezier(.2,.9,.3,1);
+}
+.onboarding-card { max-width: 560px; border-radius: 22px; padding: 40px 36px 24px; box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04); }
+.wizard-card { max-width: 480px; border-radius: 20px; padding: 28px 28px 22px; animation-duration: .35s; }
+@keyframes obRise { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-        body {
-            font-family: var(--ui-font);
-            background-color: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
+.ob-logo, .wizard-logo, .home-logo {
+    background: linear-gradient(135deg, var(--accent), #bb9af7);
+    display: flex; align-items: center; justify-content: center;
+    color: #0f0f14; font-weight: 800; flex-shrink: 0;
+}
+.ob-logo { width: 38px; height: 38px; border-radius: 11px; font-size: 18px; letter-spacing: -.02em; box-shadow: 0 10px 28px rgba(122,162,247,.4); }
+.wizard-logo { width: 40px; height: 40px; border-radius: 11px; font-size: 18px; }
+.wizard-logo.done { background: linear-gradient(135deg, var(--ok), #7ac97a); }
+.home-logo { width: 52px; height: 52px; border-radius: 14px; font-size: 24px; letter-spacing: -.03em; box-shadow: 0 10px 30px rgba(122,162,247,.35); }
 
-        /* Scrollbars */
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 5px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* Onboarding */
+.ob-brand, .wizard-brand, .home-brand-row { display: flex; align-items: center; gap: 12px; }
+.ob-brand { margin-bottom: 18px; }
+.ob-brand-name { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+.ob-badge-pill { margin-left: auto; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgba(122,162,247,.14); color: var(--accent); border: 1px solid rgba(122,162,247,.28); letter-spacing: .02em; }
+.ob-tagline { font-size: 24px; line-height: 1.2; margin-bottom: 10px; font-weight: 700; letter-spacing: -.02em; }
+.ob-sub { font-size: 14px; line-height: 1.55; color: var(--muted); margin-bottom: 28px; max-width: 44ch; }
+.ob-primary {
+    display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
+    padding: 20px; border-radius: 16px; border: 1px solid rgba(122,162,247,.55);
+    background: linear-gradient(180deg, rgba(122,162,247,.18), rgba(122,162,247,.04));
+    color: var(--text); cursor: pointer; font-family: inherit;
+    box-shadow: 0 10px 30px rgba(122,162,247,.22); margin-bottom: 14px;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.ob-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 44px rgba(122,162,247,.36); }
+.ob-primary:disabled { opacity: .6; cursor: wait; transform: none; }
+.ob-primary-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(122,162,247,.18); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.ob-primary-body { flex: 1; min-width: 0; }
+.ob-primary-head { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 700; margin-bottom: 3px; letter-spacing: -.01em; }
+.ob-primary-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.ob-primary-desc b { color: var(--text); font-weight: 600; }
+.ob-secondary-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.ob-secondary {
+    flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text);
+    padding: 11px 14px; border-radius: 10px; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 500; transition: border-color .15s, background .15s;
+}
+.ob-secondary:hover { border-color: var(--muted); background: var(--hover); }
+.ob-tertiary {
+    display: block; width: 100%; background: transparent; border: none; color: var(--muted);
+    padding: 10px; font-size: 12px; cursor: pointer; font-family: inherit;
+    text-align: center; border-radius: 8px; transition: color .15s, background .15s;
+}
+.ob-tertiary:hover { color: var(--text); background: var(--hover); }
+.ob-tertiary b { color: var(--text); font-weight: 600; }
+.ob-unsupported { display: none; font-size: 12px; color: var(--warn); background: rgba(224,175,104,.08); border: 1px solid rgba(224,175,104,.25); padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; line-height: 1.45; }
+.ob-footer { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.ob-footer span::before { content: "✓"; color: var(--accent); margin-right: 4px; font-weight: 700; }
 
-        /* Welcome Screen */
-        #welcome-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            gap: 16px;
-        }
-        .welcome-title { font-size: 32pt; font-weight: 600; }
-        .welcome-subtitle { color: var(--muted); font-size: 12pt; margin-bottom: 24px; }
-        .welcome-btn {
-            background-color: var(--accent);
-            color: var(--bg);
-            padding: 12px 24px;
-            border-radius: 6px;
-            border: none;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .welcome-btn:hover { opacity: 0.9; }
-        .welcome-note { color: var(--muted); font-size: 10pt; margin-top: 32px; }
+/* Wizard */
+.wizard-brand { margin-bottom: 22px; }
+.wizard-eyebrow { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+.wizard-title { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.wizard-steps { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.wizard-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 10px; }
+.wizard-step + .wizard-step { border-top: 1px solid var(--border); }
+.wstep-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; margin-top: 1px; border: 1.5px solid var(--border); color: var(--muted); }
+.wizard-step.pending .wstep-icon { border-color: var(--accent); border-top-color: transparent; animation: wSpin .9s linear infinite; font-size: 0; }
+@keyframes wSpin { to { transform: rotate(360deg); } }
+.wizard-step.done .wstep-icon { border-color: var(--ok); background: rgba(158,206,106,.14); color: var(--ok); }
+.wizard-step.done .wstep-icon::after { content: "✓"; }
+.wizard-step.error .wstep-icon { border-color: var(--error); background: rgba(247,118,142,.14); color: var(--error); }
+.wizard-step.error .wstep-icon::after { content: "!"; }
+.wstep-body { flex: 1; min-width: 0; }
+.wstep-label { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.wizard-step.pending .wstep-label { color: var(--muted); }
+.wstep-hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; font-family: var(--mono-font); word-break: break-all; line-height: 1.4; }
+.wizard-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+.wizard-actions button {
+    background: var(--accent); color: #0f0f14; border: none; padding: 10px 20px; border-radius: 9px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: transform .15s, box-shadow .15s;
+}
+.wizard-actions button:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(122,162,247,.4); }
+.wizard-actions button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.wizard-actions button.secondary:hover { box-shadow: none; background: var(--hover); }
+.wizard-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+.wizard-success { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; text-align: center; }
+.wizard-success-icon {
+    width: 56px; height: 56px; border-radius: 50%; background: rgba(158,206,106,.14);
+    border: 1.5px solid var(--ok); color: var(--ok); font-size: 26px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+    animation: wPop .4s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes wPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.wizard-success-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.wizard-success-sub { font-size: 12.5px; color: var(--muted); line-height: 1.5; max-width: 34ch; }
+.wizard-success-sub code { font-family: var(--mono-font); background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--text); font-size: 11.5px; }
 
-        /* Main Layout */
-        #main-app { display: none; width: 100vw; height: 100vh; flex-direction: row; }
-        #main-app.active { display: flex; }
+/* ========== Main layout ========== */
+#main-app { width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: row; }
+#sidebar { width: 280px; min-width: 200px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.sidebar-header { padding: 16px; font-weight: 600; font-size: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.drawer-close { display: none; background: transparent; border: none; color: var(--muted); font-size: 16px; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-family: inherit; line-height: 1; }
+.drawer-close:hover { background: var(--hover); color: var(--text); }
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab-btn { flex: 1; padding: 10px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+.tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.action-row, .search-row { padding: 8px; display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.action-row button, .search-row button { background: transparent; border: none; color: var(--muted); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.action-row button:hover, .search-row button:hover { background: var(--hover); color: var(--text); }
+input[type="text"], select, textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 6px 8px; outline: none; font-family: inherit;
+    font-size: 13px; width: 100%;
+}
+input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+.tree-container { flex: 1; overflow-y: auto; padding: 8px 0; -webkit-overflow-scrolling: touch; }
+.tree-item {
+    position: relative; padding: 6px 8px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+    user-select: none; border-left: 2px solid transparent;
+}
+.tree-item:hover { background: var(--hover); }
+.tree-item.selected { background: var(--selection); border-left-color: var(--accent); }
+.tree-icon { font-size: 14px; }
+.tree-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.tree-item .tree-delete { margin-left: auto; opacity: 0; color: var(--muted); font-size: 11px; padding: 2px 6px; border-radius: 3px; cursor: pointer; transition: opacity .15s, background .15s; }
+.tree-item:hover .tree-delete { opacity: 1; }
+.tree-item .tree-delete:hover { background: var(--hover); color: var(--error); }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sidebar-footer #note-count { margin-bottom: 2px; }
+.sidebar-footer #vault-path { font-size: 11px; opacity: .85; }
+.storage-pill { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); font-size: 11.5px; line-height: 1.3; }
+.storage-pill.vault { border-color: rgba(158,206,106,.35); background: rgba(158,206,106,.06); }
+.storage-pill.sandbox { border-color: rgba(224,175,104,.35); background: rgba(224,175,104,.06); }
+.storage-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0; box-shadow: 0 0 0 3px rgba(224,175,104,.15); }
+.storage-pill.vault .storage-dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(158,206,106,.15); }
+.storage-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.storage-action { background: transparent; border: none; color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; padding: 2px 4px; border-radius: 4px; }
+.storage-action:hover { background: var(--hover); }
+.settings-panel { padding: 16px; overflow-y: auto; }
+.setting-row { margin-bottom: 16px; }
+.setting-row label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+.slider-row { display: flex; align-items: center; gap: 12px; }
+input[type="range"] { flex: 1; }
+.danger-btn { background: transparent; border: 1px solid var(--error); color: var(--error); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+.danger-btn:hover { background: rgba(247,118,142,.1); }
+#editor-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; min-width: 0; }
 
-        /* Sidebar */
-        #sidebar {
-            width: 280px;
-            min-width: 200px;
-            background-color: var(--panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-        }
-        .sidebar-header {
-            padding: 16px;
-            font-weight: 600;
-            font-size: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-            color: var(--muted);
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .tab-btn.active {
-            color: var(--text);
-            border-bottom-color: var(--accent);
-        }
-        .tab-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        
-        .action-row, .search-row {
-            padding: 8px;
-            display: flex;
-            gap: 4px;
-            border-bottom: 1px solid var(--border);
-        }
-        .action-row button, .search-row button {
-            background: transparent;
-            border: none;
-            color: var(--muted);
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .action-row button:hover, .search-row button:hover {
-            background: var(--hover);
-            color: var(--text);
-        }
+/* Editor header */
+#editor-header { height: 46px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 13px; gap: 12px; flex-shrink: 0; }
+.header-file { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 1; }
+.header-file .file-icon { font-size: 13px; opacity: .65; flex-shrink: 0; }
+#file-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.editor-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.view-modes { display: flex; gap: 2px; background: var(--bg); padding: 3px; border-radius: 9px; border: 1px solid var(--border); flex-shrink: 0; }
+.view-mode-btn { background: transparent; border: none; color: var(--muted); width: 34px; height: 26px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .12s, color .12s; }
+.view-mode-btn:hover { color: var(--text); background: var(--hover); }
+.view-mode-btn.active { background: var(--selection); color: var(--accent); }
+.view-mode-btn svg, .header-icon-btn svg, .tb-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.header-icon-btn { background: transparent; border: none; color: var(--muted); padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.header-icon-btn:hover { background: var(--hover); color: var(--text); }
+.header-icon-btn svg { width: 16px; height: 16px; }
+.header-icon-btn.active { background: var(--selection); color: var(--accent); }
+#file-status { color: var(--muted); font-size: 12px; }
+#file-status.dirty { color: var(--accent); }
+#file-status.error { color: var(--error); }
 
-        input[type="text"], select, textarea {
-            background-color: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 6px;
-            padding: 6px 8px;
-            outline: none;
-            font-family: inherit;
-            font-size: 13px;
-            width: 100%;
-        }
-        input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+/* Banners */
+#sandbox-banner, #reconnect-banner { background: linear-gradient(90deg, rgba(247,193,90,.1), rgba(122,162,247,.07)); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--text); flex-shrink: 0; }
+#reconnect-banner { background: linear-gradient(90deg, rgba(122,162,247,.14), rgba(187,154,247,.08)); }
+.sandbox-icon { font-size: 22px; line-height: 1; }
+.sandbox-content { flex: 1; min-width: 0; }
+.sandbox-title { font-weight: 600; margin-bottom: 2px; font-size: 13px; }
+.sandbox-sub { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.sandbox-cta { background: var(--accent); color: #0f0f14; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: transform .15s, box-shadow .15s; }
+.sandbox-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(122,162,247,.4); }
+.sandbox-dismiss { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 4px 8px; border-radius: 4px; line-height: 1; }
+.sandbox-dismiss:hover { background: var(--hover); color: var(--text); }
 
-        .tree-container { flex: 1; overflow-y: auto; padding: 8px 0; }
-        .tree-item {
-            padding: 6px 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            user-select: none;
-            border-left: 2px solid transparent;
-        }
-        .tree-item:hover { background-color: var(--hover); }
-        .tree-item.selected {
-            background-color: var(--selection);
-            border-left-color: var(--accent);
-        }
-        .tree-icon { font-size: 14px; }
-        .tree-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tree-children { /* Indent handled by JS */ }
+/* Find */
+#find-bar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 8px 12px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+#find-bar input { max-width: 300px; }
+#find-count { font-size: 12px; color: var(--muted); min-width: 80px; }
 
-        .sidebar-footer {
-            padding: 12px 16px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-            color: var(--muted);
-        }
+/* Toolbar */
+#markdown-toolbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 4px 10px; display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+.tb-group { display: flex; gap: 2px; }
+.tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
+.tb-btn { background: transparent; border: none; color: var(--muted); width: 32px; height: 30px; border-radius: 6px; cursor: pointer; font-family: var(--ui-font); font-size: 13px; display: inline-flex; align-items: center; justify-content: center; transition: background .12s, color .12s; padding: 0; }
+.tb-btn:hover { background: var(--hover); color: var(--text); }
+.tb-btn:active { background: var(--selection); }
+.tb-text { font-weight: 700; }
+.tb-text.italic { font-style: italic; }
+.tb-text.strike { text-decoration: line-through; }
+.tb-heading { font-weight: 700; font-size: 11.5px; letter-spacing: -.02em; }
 
-        /* Settings */
-        .settings-panel { padding: 16px; overflow-y: auto; }
-        .setting-row { margin-bottom: 16px; }
-        .setting-row label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
-        .slider-row { display: flex; align-items: center; gap: 12px; }
-        input[type="range"] { flex: 1; }
+/* Editor + preview */
+#editor-splitter { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+#editor-wrap { flex: 1; display: flex; overflow: hidden; min-width: 0; background: var(--bg); }
+#editor-scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; min-width: 0; background: var(--bg); -webkit-overflow-scrolling: touch; }
+#editor-inner { position: relative; min-height: 100%; min-width: 100%; }
+#editor, #highlight {
+    font-family: var(--mono-font); font-size: var(--editor-font-size); line-height: 1.6;
+    letter-spacing: 0; tab-size: 2; padding: 24px; white-space: pre-wrap;
+    overflow-wrap: break-word; word-break: normal; border: none; margin: 0;
+    box-sizing: border-box; font-weight: 400; font-style: normal;
+}
+#highlight { position: absolute; top: 0; left: 0; width: 100%; color: var(--text); pointer-events: none; z-index: 1; overflow: hidden; background: transparent; }
+#editor { position: relative; display: block; width: 100%; min-height: 100%; background: transparent; color: transparent; caret-color: var(--text); resize: none; outline: none; overflow: hidden; z-index: 2; -webkit-appearance: none; appearance: none; }
+#editor::placeholder { color: var(--muted); opacity: .55; }
+#editor::selection { background: rgba(122,162,247,.32); color: transparent; }
+#highlight .md-marker { color: var(--muted); opacity: .6; }
+#highlight .md-heading { color: var(--warn); }
+#highlight .md-bold { color: var(--error); }
+#highlight .md-italic { color: var(--accent); }
+#highlight .md-strike { color: var(--muted); text-decoration: line-through; opacity: .85; }
+#highlight .md-code { color: var(--ok); background: rgba(158,206,106,.08); border-radius: 3px; }
+#highlight .md-codeblock { color: var(--ok); }
+#highlight .md-quote { color: var(--muted); }
+#highlight .md-list { color: var(--accent); }
+#highlight .md-list-item { color: var(--text); }
+#highlight .md-task { color: var(--text); }
+#highlight .md-link-text { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+#highlight .md-link-url { color: var(--muted); opacity: .8; }
+#highlight .md-hr { color: var(--muted); opacity: .5; }
+#preview { flex: 1; padding: 24px 48px; overflow-y: auto; border-left: 1px solid var(--border); max-width: 860px; margin: 0 auto; width: 100%; min-width: 0; -webkit-overflow-scrolling: touch; }
+#preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 { color: var(--text); font-weight: 600; margin: 1.2em 0 .5em; line-height: 1.3; }
+#preview h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: .2em; }
+#preview h2 { font-size: 1.5em; }
+#preview h3 { font-size: 1.25em; }
+#preview p { margin: .8em 0; line-height: 1.6; }
+#preview a { color: var(--accent); text-decoration: none; }
+#preview a:hover { text-decoration: underline; }
+#preview code { font-family: var(--mono-font); font-size: .92em; background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+#preview pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; overflow-x: auto; margin: 1em 0; }
+#preview pre code { background: transparent; border: none; padding: 0; font-size: .9em; white-space: pre-wrap; }
+#preview blockquote { margin: 1em 0; padding: .2em 0 .2em 16px; border-left: 3px solid var(--accent); color: var(--muted); }
+#preview ul, #preview ol { margin: .8em 0; padding-left: 1.6em; }
+#preview li { margin: .3em 0; }
+#preview table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+#preview th, #preview td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+#preview th { background: var(--panel); font-weight: 600; }
+#preview img { max-width: 100%; border-radius: 6px; }
+#preview input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
+#preview hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
 
-        /* Editor Area */
-        #editor-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--bg);
-            overflow: hidden;
-        }
-        #editor-header {
-            height: 40px;
-            background-color: var(--panel);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
-            font-size: 13px;
-        }
-        #file-status { color: var(--muted); font-size: 12px; }
-        #file-status.dirty { color: var(--accent); }
-        #file-status.error { color: var(--error); }
+/* Status bar */
+#editor-statusbar { height: 28px; padding: 0 16px; background: var(--panel); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--muted); flex-shrink: 0; user-select: none; }
+.stat-group { display: flex; align-items: center; gap: 8px; }
+.stat-sep { opacity: .4; }
+#stat-read { color: var(--accent); font-weight: 500; }
+#stat-mode { font-family: var(--mono-font); font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); }
 
-        #markdown-toolbar {
-            background-color: var(--panel);
-            border-bottom: 1px solid var(--border);
-            padding: 6px 12px;
-            display: flex;
-            gap: 4px;
-            align-items: center;
-        }
-        #markdown-toolbar button {
-            background: transparent;
-            border: none;
-            color: var(--muted);
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: var(--mono-font);
-            font-size: 13px;
-        }
-        #markdown-toolbar button:hover { background: var(--hover); color: var(--text); }
-        #markdown-toolbar .separator { width: 1px; height: 16px; background: var(--border); margin: 0 6px; }
+/* Focus */
+body.focus-mode #sidebar, body.focus-mode #markdown-toolbar { display: none; }
 
-        #find-bar {
-            background-color: var(--panel);
-            border-bottom: 1px solid var(--border);
-            padding: 8px 12px;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        #find-bar input { max-width: 300px; }
-        #find-count { font-size: 12px; color: var(--muted); min-width: 80px; }
+/* Home view */
+#home-view { display: none; flex: 1; overflow-y: auto; background: var(--bg); min-height: 0; -webkit-overflow-scrolling: touch; }
+body.home-mode #home-view { display: block; }
+body.home-mode #editor-header, body.home-mode #markdown-toolbar,
+body.home-mode #editor-splitter, body.home-mode #editor-statusbar,
+body.home-mode #find-bar, body.home-mode #sandbox-banner,
+body.home-mode #reconnect-banner { display: none !important; }
+.home-container { max-width: 820px; margin: 0 auto; padding: 56px 32px 48px; }
+.home-hero { margin-bottom: 40px; }
+.home-brand-row { gap: 16px; margin-bottom: 20px; }
+.home-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.home-title { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--text); line-height: 1.15; }
+.home-sub { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 52ch; }
+.home-section { margin-bottom: 32px; }
+.home-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.home-section-head h2 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.home-muted { font-size: 12px; color: var(--muted); opacity: .8; }
+.home-templates { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.home-template {
+    display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    cursor: pointer; text-align: left; font-family: inherit; color: var(--text);
+    transition: transform .15s, border-color .15s, background .15s;
+}
+.home-template:hover { border-color: var(--accent); background: var(--hover); transform: translateY(-1px); }
+.home-template:active { transform: translateY(0); }
+.home-template-icon { font-size: 22px; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+.home-template-body { min-width: 0; }
+.home-template-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; color: var(--text); }
+.home-template-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.home-storage-card { display: flex; align-items: center; gap: 16px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; }
+.home-storage-card.vault { border-color: rgba(158,206,106,.35); background: linear-gradient(180deg, rgba(158,206,106,.08), rgba(158,206,106,.02)); }
+.home-storage-card.sandbox { border-color: rgba(224,175,104,.35); background: linear-gradient(180deg, rgba(224,175,104,.08), rgba(224,175,104,.02)); }
+.home-storage-card.reconnect { border-color: rgba(122,162,247,.45); background: linear-gradient(180deg, rgba(122,162,247,.1), rgba(122,162,247,.02)); }
+.home-storage-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 1px solid var(--border); }
+.home-storage-body { flex: 1; min-width: 0; }
+.home-storage-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.home-storage-desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.home-storage-desc code { font-family: var(--mono-font); font-size: 11.5px; background: var(--bg); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); color: var(--text); }
+.home-storage-cta { background: var(--accent); color: #0f0f14; border: none; padding: 9px 16px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; transition: transform .15s, box-shadow .15s; flex-shrink: 0; }
+.home-storage-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(122,162,247,.4); }
+.home-recent-list { display: flex; flex-direction: column; gap: 2px; }
+.home-recent-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 9px; cursor: pointer; background: transparent; border: 1px solid transparent; font-family: inherit; color: var(--text); text-align: left; transition: background .12s, border-color .12s; }
+.home-recent-item:hover { background: var(--panel); border-color: var(--border); }
+.home-recent-icon { font-size: 15px; opacity: .7; flex-shrink: 0; }
+.home-recent-name { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-recent-path { font-size: 11.5px; color: var(--muted); margin-left: auto; flex-shrink: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 11.5px; color: var(--muted); }
+.home-footer kbd { font-family: var(--mono-font); font-size: 10.5px; padding: 1px 5px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
 
-        #editor-splitter {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
+/* ========== Mobile bottom bar (default hidden) ========== */
+#mobile-bottom-bar { display: none; }
+#sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+#sidebar-backdrop.show { display: block; }
 
-        #editor {
-            flex: 1;
-            background-color: var(--bg);
-            color: var(--text);
-            border: none;
-            padding: 24px;
-            font-family: var(--mono-font);
-            font-size: var(--editor-font-size);
-            line-height: 1.6;
-            resize: none;
-            outline: none;
-            white-space: pre-wrap;
-            overflow-y: auto;
-        }
+@media (max-width: 560px) {
+    .home-templates { grid-template-columns: 1fr; }
+    .home-container { padding: 32px 20px; }
+    .home-title { font-size: 22px; }
+    .home-storage-card { flex-wrap: wrap; }
+}
 
-        #preview {
-            flex: 1;
-            padding: 24px 48px;
-            overflow-y: auto;
-            border-left: 1px solid var(--border);
-            max-width: 860px;
-            margin: 0 auto;
-            width: 100%;
-        }
+/* ========== MOBILE: one-pane focus + drawer + bottom bar ========== */
+@media (max-width: 768px) {
+    /* Viewport */
+    body, #main-app { height: 100vh; height: 100dvh; }
 
-        /* Markdown Preview Styles */
-        #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6 {
-            color: var(--text); font-weight: 600; margin: 1.2em 0 0.5em 0; line-height: 1.3;
-        }
-        #preview h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.2em; }
-        #preview h2 { font-size: 1.5em; }
-        #preview h3 { font-size: 1.25em; }
-        #preview p { margin: 0.8em 0; line-height: 1.6; }
-        #preview a { color: var(--accent); text-decoration: none; }
-        #preview a:hover { text-decoration: underline; }
-        #preview code {
-            font-family: var(--mono-font); font-size: 0.92em; background-color: var(--code-bg);
-            border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px;
-        }
-        #preview pre {
-            background-color: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
-            padding: 12px 16px; overflow-x: auto; margin: 1em 0;
-        }
-        #preview pre code { background: transparent; border: none; padding: 0; font-size: 0.9em; white-space: pre-wrap; }
-        #preview blockquote {
-            margin: 1em 0; padding: 0.2em 0 0.2em 16px; border-left: 3px solid var(--accent); color: var(--muted);
-        }
-        #preview ul, #preview ol { margin: 0.8em 0; padding-left: 1.6em; }
-        #preview li { margin: 0.3em 0; }
-        #preview table { border-collapse: collapse; margin: 1em 0; width: 100%; }
-        #preview th, #preview td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-        #preview th { background-color: var(--panel); font-weight: 600; }
-        #preview img { max-width: 100%; border-radius: 6px; }
-        #preview input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
-        #preview hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
-    </style>
+    /* Drawer sidebar */
+    #sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: 84vw; max-width: 320px; min-width: 0;
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.2,.9,.3,1);
+        z-index: 100;
+        box-shadow: 8px 0 32px rgba(0,0,0,.5);
+        border-right: 1px solid var(--border);
+        height: 100vh; height: 100dvh;
+    }
+    #sidebar.mobile-open { transform: translateX(0); }
+    .drawer-close { display: inline-flex; align-items: center; justify-content: center; }
+
+    /* Header simplification */
+    #editor-header { padding: 0 10px; gap: 6px; height: 44px; }
+    .view-modes { display: none; }
+    #btn-home, #btn-focus, #btn-open-vault-header { display: none; }
+    .editor-header-right { gap: 0; }
+    #file-status { font-size: 11.5px; }
+
+    /* Toolbar: horizontal scroll, bigger touch targets */
+    #markdown-toolbar {
+        overflow-x: auto; overflow-y: hidden; white-space: nowrap;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        padding: 5px 8px;
+    }
+    #markdown-toolbar::-webkit-scrollbar { display: none; }
+    .tb-group { flex-shrink: 0; }
+    .tb-btn { width: 40px; height: 38px; flex-shrink: 0; font-size: 14px; }
+    .tb-sep { flex-shrink: 0; }
+
+    /* Editor / preview */
+    #editor, #highlight { padding: 16px; font-size: max(16px, var(--editor-font-size)); }
+    #preview { padding: 16px 18px; border-left: none; }
+    #editor-splitter { flex-direction: column; }
+
+    /* Statusbar: hidden on mobile, replaced by bottom bar */
+    #editor-statusbar { display: none; }
+
+    /* Find bar */
+    #find-bar { flex-wrap: wrap; padding: 6px 8px; gap: 4px; }
+    #find-bar input { max-width: none; flex: 1; min-width: 120px; }
+    #find-count { min-width: 0; }
+
+    /* Sidebar tree: touch friendly */
+    .tree-item { padding: 10px 8px; min-height: 44px; font-size: 14px; }
+    .tree-item .tree-delete { opacity: .55; padding: 6px 8px; font-size: 13px; }
+    .action-row button, .search-row button { padding: 8px 10px; font-size: 13px; }
+    input[type="text"], select, textarea { font-size: 16px; }
+
+    /* Onboarding / wizard mobile */
+    #onboarding-overlay { padding: 16px; }
+    .onboarding-card { padding: 28px 22px 18px; border-radius: 18px; }
+    .wizard-card { padding: 22px 20px 18px; border-radius: 16px; }
+    .ob-tagline { font-size: 20px; }
+    .ob-sub { font-size: 13px; margin-bottom: 22px; }
+    .ob-primary { padding: 16px; }
+    .ob-secondary-row { flex-direction: column; }
+    .ob-footer { font-size: 11px; }
+
+    /* Home on mobile */
+    .home-container { padding: 28px 18px 96px; }
+    .home-hero { margin-bottom: 28px; }
+    .home-title { font-size: 22px; }
+    .home-sub { font-size: 13.5px; }
+
+    /* Banners */
+    #sandbox-banner, #reconnect-banner { padding: 10px 12px; gap: 10px; }
+    .sandbox-icon { font-size: 20px; }
+    .sandbox-title { font-size: 12.5px; }
+    .sandbox-sub { font-size: 11.5px; }
+    .sandbox-cta { padding: 8px 12px; font-size: 12px; }
+
+    /* Mobile bottom bar */
+    #mobile-bottom-bar {
+        display: flex;
+        flex-shrink: 0;
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        z-index: 50;
+    }
+    .mob-bar-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 8px 4px 10px;
+        min-height: 52px;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-family: inherit;
+        transition: color .12s, background .12s;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mob-bar-btn:active { background: var(--hover); }
+    .mob-bar-btn:hover { color: var(--text); }
+    .mob-bar-icon { font-size: 18px; line-height: 1; }
+    .mob-bar-label { font-size: 10.5px; font-weight: 500; letter-spacing: .01em; }
+    body.home-mode #mob-btn-mode { opacity: .35; pointer-events: none; }
+}
+
+@media (max-width: 400px) {
+    #editor-header { height: 42px; }
+    #file-name { font-size: 12.5px; }
+    .home-title { font-size: 20px; }
+}
+</style>
 </head>
 <body>
 
-    <!-- Welcome Screen -->
-    <div id="welcome-screen">
-        <h1 class="welcome-title">Graphite</h1>
-        <p class="welcome-subtitle">Минимальное локальное хранилище markdown-заметок</p>
-        <button id="btn-open-vault" class="welcome-btn">Открыть папку</button>
-        <p class="welcome-note">Требуется современный браузер (Chrome, Edge, Opera) для работы с локальными файлами</p>
+<div id="onboarding-overlay" style="display:none;">
+    <div class="onboarding-card">
+        <div class="ob-brand">
+            <div class="ob-logo">G</div>
+            <div class="ob-brand-name">Graphite</div>
+            <div class="ob-badge-pill">Local-first</div>
+        </div>
+        <div class="ob-tagline">Заметки, которые не теряются</div>
+        <div class="ob-sub">Markdown-редактор без аккаунта и облака. Файлы лежат прямо на вашем диске — их можно открыть в любом редакторе.</div>
+        <button id="ob-btn-vault" class="ob-primary">
+            <span class="ob-primary-icon">📁</span>
+            <span class="ob-primary-body">
+                <span class="ob-primary-head">Создать папку Graphite <span class="ob-badge-pill">Рекомендуем</span></span>
+                <span class="ob-primary-desc">Файлы <b>.md</b> появятся в <b>Documents/Graphite</b>. Переживут очистку браузера и синхронизируются через Dropbox/iCloud.</span>
+            </span>
+        </button>
+        <div class="ob-unsupported" id="ob-unsupported-note">Этот браузер не умеет открывать папки. Используйте Chrome, Edge или Opera — либо начните без папки (заметки будут храниться только в этом браузере).</div>
+        <div class="ob-secondary-row">
+            <button id="ob-btn-open" class="ob-secondary">Открыть существующую папку</button>
+        </div>
+        <button id="ob-btn-sandbox" class="ob-tertiary">Продолжить <b>без папки</b> — заметки останутся только в этом браузере</button>
+        <div class="ob-footer">
+            <span>Работает офлайн</span><span>Без аккаунта</span><span>Данные — только у вас</span>
+        </div>
+    </div>
+</div>
+
+<div id="setup-wizard" class="wizard-overlay" style="display:none;">
+    <div class="wizard-card">
+        <div class="wizard-brand">
+            <div class="wizard-logo" id="wizard-logo">G</div>
+            <div>
+                <div class="wizard-eyebrow" id="wizard-eyebrow">Настройка хранилища</div>
+                <div class="wizard-title" id="wizard-title">Подключаем папку</div>
+            </div>
+        </div>
+        <div id="wizard-steps" class="wizard-steps"></div>
+        <div id="wizard-actions" class="wizard-actions"></div>
+    </div>
+</div>
+
+<div id="main-app">
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <span>Graphite</span>
+            <button id="btn-close-drawer" class="drawer-close" aria-label="Закрыть меню">✕</button>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="files">Файлы</button>
+            <button class="tab-btn" data-tab="search">Поиск</button>
+            <button class="tab-btn" data-tab="settings">Настройки</button>
+        </div>
+        <div class="tab-content" id="tab-files">
+            <div class="action-row">
+                <button id="btn-new-note" title="Ctrl+N">+ Заметка</button>
+                <button id="btn-new-folder">+ Папка</button>
+                <button id="btn-refresh">Обновить</button>
+            </div>
+            <div class="tree-container" id="file-tree"></div>
+        </div>
+        <div class="tab-content" id="tab-search" style="display:none;">
+            <div class="search-row"><input type="text" id="search-input" placeholder="Поиск по имени..."></div>
+            <div class="tree-container" id="search-tree"></div>
+        </div>
+        <div class="tab-content" id="tab-settings" style="display:none;">
+            <div class="settings-panel">
+                <div class="setting-row">
+                    <label>Тема оформления</label>
+                    <select id="setting-theme">
+                        <option value="Graphite Dark">Graphite Dark</option>
+                        <option value="Midnight">Midnight</option>
+                        <option value="Nord">Nord</option>
+                        <option value="Sepia Light">Sepia Light</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Размер шрифта редактора</label>
+                    <div class="slider-row">
+                        <input type="range" id="setting-font-size" min="10" max="24" value="14">
+                        <span id="font-size-val">14px</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <label>Песочница</label>
+                    <button id="btn-reset-sandbox" class="danger-btn">Очистить песочницу</button>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div id="note-count">0 заметок</div>
+            <div id="vault-path">Песочница</div>
+            <div class="storage-pill sandbox" id="storage-pill">
+                <span class="storage-dot"></span>
+                <span class="storage-text" id="storage-text">Только в этом браузере</span>
+                <button class="storage-action" id="storage-action">→ В папку</button>
+            </div>
+        </div>
     </div>
 
-    <!-- Main App -->
-    <div id="main-app">
-        <!-- Sidebar -->
-        <div id="sidebar">
-            <div class="sidebar-header">Graphite</div>
-            
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="files">Файлы</button>
-                <button class="tab-btn" data-tab="search">Поиск</button>
-                <button class="tab-btn" data-tab="settings">Настройки</button>
+    <div id="editor-area">
+        <div id="editor-header">
+            <div class="header-file"><span class="file-icon">📄</span><span id="file-name">Без названия</span></div>
+            <div class="view-modes" role="tablist" aria-label="Режим просмотра">
+                <button class="view-mode-btn" data-mode="edit" title="Только редактор (Ctrl+1)" aria-label="Только редактор"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button class="view-mode-btn active" data-mode="split" title="Разделённый вид (Ctrl+2)" aria-label="Разделённый вид"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg></button>
+                <button class="view-mode-btn" data-mode="read" title="Только чтение (Ctrl+3)" aria-label="Только чтение"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></button>
             </div>
-
-            <div class="tab-content" id="tab-files">
-                <div class="action-row">
-                    <button id="btn-new-note" title="Ctrl+N">+ Заметка</button>
-                    <button id="btn-new-folder">+ Папка</button>
-                    <button id="btn-refresh">Обновить</button>
-                </div>
-                <div class="tree-container" id="file-tree"></div>
+            <div class="editor-header-right">
+                <span id="file-status"></span>
+                <button id="btn-home" class="header-icon-btn" title="На главную" aria-label="На главную"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+                <button id="btn-focus" class="header-icon-btn" title="Режим фокуса" aria-label="Режим фокуса"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+                <button id="btn-open-vault-header" class="header-icon-btn" title="Открыть папку (сохранить в .md)" aria-label="Открыть папку"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></button>
             </div>
+        </div>
 
-            <div class="tab-content" id="tab-search" style="display: none;">
-                <div class="search-row">
-                    <input type="text" id="search-input" placeholder="Поиск по имени...">
-                </div>
-                <div class="tree-container" id="search-tree"></div>
+        <div id="reconnect-banner" style="display:none;">
+            <div class="sandbox-icon">🔌</div>
+            <div class="sandbox-content">
+                <div class="sandbox-title">Папка не подключена</div>
+                <div class="sandbox-sub">Браузер сбросил доступ после перезапуска. Подключите папку снова — ваши .md-файлы на месте.</div>
             </div>
+            <button id="btn-reconnect" class="sandbox-cta">Подключить →</button>
+        </div>
 
-            <div class="tab-content" id="tab-settings" style="display: none;">
-                <div class="settings-panel">
-                    <div class="setting-row">
-                        <label>Тема оформления</label>
-                        <select id="setting-theme">
-                            <option value="Graphite Dark">Graphite Dark</option>
-                            <option value="Midnight">Midnight</option>
-                            <option value="Nord">Nord</option>
-                            <option value="Sepia Light">Sepia Light</option>
-                        </select>
+        <div id="sandbox-banner" style="display:none;">
+            <div class="sandbox-icon">⚠️</div>
+            <div class="sandbox-content">
+                <div class="sandbox-title">Заметки живут только в этом браузере</div>
+                <div class="sandbox-sub" id="sandbox-sub">Очистка данных браузера удалит их. Перенесите их в папку — и они станут .md-файлами на диске.</div>
+            </div>
+            <button id="btn-open-vault-banner" class="sandbox-cta">Перенести в папку →</button>
+            <button id="btn-dismiss-banner" class="sandbox-dismiss" title="Скрыть на этот раз">✕</button>
+        </div>
+
+        <div id="find-bar" style="display:none;">
+            <input type="text" id="find-input" placeholder="Поиск в заметке...">
+            <span id="find-count"></span>
+            <button onclick="app.findPrev()">←</button>
+            <button onclick="app.findNext()">→</button>
+            <button onclick="app.hideFind()">✕</button>
+        </div>
+
+        <div id="markdown-toolbar">
+            <div class="tb-group">
+                <button class="tb-btn" onclick="app.wrapSelection('**')" title="Полужирный (Ctrl+B)"><span class="tb-text">B</span></button>
+                <button class="tb-btn" onclick="app.wrapSelection('*')" title="Курсив (Ctrl+I)"><span class="tb-text italic">I</span></button>
+                <button class="tb-btn" onclick="app.wrapSelection('~~')" title="Зачёркнутый"><span class="tb-text strike">S</span></button>
+                <button class="tb-btn" onclick="app.wrapSelection('`')" title="Код"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="tb-group">
+                <button class="tb-btn" onclick="app.toggleLinePrefix('# ')" title="Заголовок 1"><span class="tb-heading">H1</span></button>
+                <button class="tb-btn" onclick="app.toggleLinePrefix('## ')" title="Заголовок 2"><span class="tb-heading">H2</span></button>
+                <button class="tb-btn" onclick="app.toggleLinePrefix('### ')" title="Заголовок 3"><span class="tb-heading">H3</span></button>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="tb-group">
+                <button class="tb-btn" onclick="app.toggleLinePrefix('- ')" title="Маркированный список">•</button>
+                <button class="tb-btn" onclick="app.toggleLinePrefix('1. ')" title="Нумерованный список">1.</button>
+                <button class="tb-btn" onclick="app.toggleLinePrefix('> ')" title="Цитата">❝</button>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="tb-group">
+                <button class="tb-btn" onclick="app.insertLink()" title="Ссылка"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <button class="tb-btn" onclick="app.insertImage()" title="Изображение"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+            </div>
+        </div>
+
+        <div id="editor-splitter">
+            <div id="editor-wrap">
+                <div id="editor-scroller">
+                    <div id="editor-inner">
+                        <pre id="highlight" aria-hidden="true"></pre>
+                        <textarea id="editor" spellcheck="false" placeholder="Начните писать..."></textarea>
                     </div>
-                    <div class="setting-row">
-                        <label>Размер шрифта редактора</label>
-                        <div class="slider-row">
-                            <input type="range" id="setting-font-size" min="10" max="24" value="14">
-                            <span id="font-size-val">14px</span>
+                </div>
+            </div>
+            <div id="preview"></div>
+        </div>
+
+        <div id="editor-statusbar">
+            <div class="stat-group">
+                <span id="stat-words">0 слов</span><span class="stat-sep">·</span>
+                <span id="stat-chars">0 символов</span><span class="stat-sep">·</span>
+                <span id="stat-read">—</span>
+            </div>
+            <div class="stat-group"><span id="stat-mode">Markdown</span></div>
+        </div>
+
+        <div id="home-view">
+            <div class="home-container">
+                <div class="home-hero">
+                    <div class="home-brand-row">
+                        <div class="home-logo">G</div>
+                        <div>
+                            <div class="home-eyebrow" id="home-greeting">Добро пожаловать</div>
+                            <h1 class="home-title">Что напишем сегодня?</h1>
                         </div>
                     </div>
-                    <div class="setting-row">
-                        <label>Перенос строк</label>
-                        <input type="checkbox" id="setting-wrap" checked>
+                    <p class="home-sub">Graphite — markdown-заметки, которые живут прямо на вашем диске. Никаких аккаунтов и облаков.</p>
+                </div>
+                <div class="home-section">
+                    <div class="home-section-head">
+                        <h2>Новая заметка</h2>
+                        <span class="home-muted" id="home-template-hint">Выберите шаблон</span>
                     </div>
+                    <div class="home-templates" id="home-templates"></div>
+                </div>
+                <div class="home-section" id="home-storage-section">
+                    <div class="home-section-head"><h2>Хранилище</h2></div>
+                    <div class="home-storage-card" id="home-storage-card"></div>
+                </div>
+                <div class="home-section" id="home-recent-section" style="display:none;">
+                    <div class="home-section-head"><h2 id="home-recent-title">Недавние</h2></div>
+                    <div class="home-recent-list" id="home-recent-list"></div>
+                </div>
+                <div class="home-footer">
+                    <span><kbd>Ctrl</kbd>+<kbd>N</kbd> — новая заметка</span>
+                    <span><kbd>Ctrl</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — режим</span>
+                    <span><kbd>Ctrl</kbd>+<kbd>F</kbd> — найти в заметке</span>
                 </div>
             </div>
-
-            <div class="sidebar-footer">
-                <div id="note-count">0 заметок</div>
-                <div id="vault-path">Хранилище не выбрано</div>
-            </div>
         </div>
 
-        <!-- Editor Area -->
-        <div id="editor-area">
-            <div id="editor-header">
-                <span id="file-name">Без названия</span>
-                <span id="file-status"></span>
-            </div>
-            
-            <div id="find-bar" style="display: none;">
-                <input type="text" id="find-input" placeholder="Поиск в заметке...">
-                <span id="find-count"></span>
-                <button onclick="app.findPrev()">←</button>
-                <button onclick="app.findNext()">→</button>
-                <button onclick="app.hideFind()">✕</button>
-            </div>
-
-            <div id="markdown-toolbar">
-                <button onclick="app.wrapSelection('**')" title="Полужирный (Ctrl+B)"><b>B</b></button>
-                <button onclick="app.wrapSelection('*')" title="Курсив (Ctrl+I)"><i>I</i></button>
-                <button onclick="app.wrapSelection('~~')" title="Зачёркнутый"><s>S</s></button>
-                <button onclick="app.wrapSelection('`')" title="Код">&lt;/&gt;</button>
-                <span class="separator"></span>
-                <button onclick="app.toggleLinePrefix('# ')">H1</button>
-                <button onclick="app.toggleLinePrefix('## ')">H2</button>
-                <button onclick="app.toggleLinePrefix('### ')">H3</button>
-                <span class="separator"></span>
-                <button onclick="app.toggleLinePrefix('- ')">•</button>
-                <button onclick="app.toggleLinePrefix('1. ')">1.</button>
-                <button onclick="app.toggleLinePrefix('> ')">"</button>
-                <span class="separator"></span>
-                <button onclick="app.insertLink()">🔗</button>
-                <button onclick="app.insertImage()">🖼</button>
-            </div>
-
-            <div id="editor-splitter">
-                <textarea id="editor" spellcheck="false" placeholder="Начните писать..."></textarea>
-                <div id="preview"></div>
-            </div>
+        <div id="mobile-bottom-bar">
+            <button id="mob-btn-files" class="mob-bar-btn" aria-label="Открыть список файлов">
+                <span class="mob-bar-icon">📁</span>
+                <span class="mob-bar-label">Файлы</span>
+            </button>
+            <button id="mob-btn-mode" class="mob-bar-btn" aria-label="Переключить режим">
+                <span class="mob-bar-icon" id="mob-mode-icon">👁</span>
+                <span class="mob-bar-label" id="mob-mode-label">Читать</span>
+            </button>
+            <button id="mob-btn-new" class="mob-bar-btn" aria-label="Новая заметка">
+                <span class="mob-bar-icon">＋</span>
+                <span class="mob-bar-label">Заметка</span>
+            </button>
+            <button id="mob-btn-home" class="mob-bar-btn" aria-label="На главную">
+                <span class="mob-bar-icon">🏠</span>
+                <span class="mob-bar-label">Главная</span>
+            </button>
         </div>
     </div>
+</div>
 
-    <script>
-        marked.setOptions({ gfm: true, breaks: true });
+<div id="sidebar-backdrop"></div>
 
-        class VaultManager {
-            constructor() {
-                this.rootHandle = null;
-                this.files = new Map(); 
+<script>
+marked.setOptions({ gfm: true, breaks: true });
+
+function track(event, props) {
+    try {
+        if (window.gtag) window.gtag('event', event, props || {});
+        else if (window.plausible) window.plausible(event, { props });
+        else console.debug('[track]', event, props || {});
+    } catch (e) {}
+}
+
+// ---------- Markdown syntax highlighting ----------
+const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function inlineHighlight(text) {
+    const codeSpans = [];
+    text = text.replace(/`([^`]+)`/g, (_, c) => {
+        const idx = codeSpans.push(
+            '<span class="md-marker">`</span><span class="md-code">' + c + '</span><span class="md-marker">`</span>'
+        ) - 1;
+        return '\u0001' + idx + '\u0001';
+    });
+    text = text.replace(/\*\*([\s\S]+?)\*\*/g, (_, c) =>
+        '<span class="md-marker">**</span><span class="md-bold">' + c + '</span><span class="md-marker">**</span>');
+    text = text.replace(/~~([\s\S]+?)~~/g, (_, c) =>
+        '<span class="md-marker">~~</span><span class="md-strike">' + c + '</span><span class="md-marker">~~</span>');
+    text = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, (_, pre, c) =>
+        pre + '<span class="md-marker">*</span><span class="md-italic">' + c + '</span><span class="md-marker">*</span>');
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) =>
+        '<span class="md-marker">[</span><span class="md-link-text">' + t + '</span>' +
+        '<span class="md-marker">](</span><span class="md-link-url">' + u + '</span><span class="md-marker">)</span>');
+    return text.replace(/\u0001(\d+)\u0001/g, (_, i) => codeSpans[+i]);
+}
+
+function highlightLine(line) {
+    let m = line.match(/^(\s*)(#{1,6})(\s+)(.*)$/);
+    if (m) return m[1] + '<span class="md-marker">' + m[2] + '</span>' + m[3] + '<span class="md-heading">' + inlineHighlight(m[4]) + '</span>';
+    m = line.match(/^(\s*)(&gt;\s?)(.*)$/);
+    if (m) return m[1] + '<span class="md-marker">' + m[2] + '</span>' + '<span class="md-quote">' + inlineHighlight(m[3]) + '</span>';
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return '<span class="md-hr">' + line + '</span>';
+    m = line.match(/^(\s*)([-*+]|\d+\.)(\s+)(.*)$/);
+    if (m) {
+        const sp = m[1], marker = m[2], space = m[3], rest = m[4];
+        const task = rest.match(/^(\[[ xX]\])(\s+)(.*)$/);
+        if (task) return sp + '<span class="md-list">' + marker + '</span>' + space +
+            '<span class="md-marker">' + task[1] + '</span>' + task[2] +
+            '<span class="md-task">' + inlineHighlight(task[3]) + '</span>';
+        return sp + '<span class="md-list">' + marker + '</span>' + space +
+            '<span class="md-list-item">' + inlineHighlight(rest) + '</span>';
+    }
+    return inlineHighlight(line);
+}
+
+function highlightMarkdown(text) {
+    let inCode = false;
+    return text.split('\n').map(line => {
+        const fence = line.match(/^\s*(```+|~~~+)/);
+        if (fence) {
+            inCode = !inCode;
+            return '<span class="md-marker">' + escapeHtml(line) + '</span>';
+        }
+        if (inCode) return '<span class="md-codeblock">' + (escapeHtml(line) || ' ') + '</span>';
+        return highlightLine(escapeHtml(line));
+    }).join('\n');
+}
+
+// ---------- IndexedDB ----------
+function openIDB() {
+    return new Promise((resolve, reject) => {
+        try {
+            const req = indexedDB.open('graphite', 1);
+            req.onupgradeneeded = () => {
+                if (!req.result.objectStoreNames.contains('kv')) req.result.createObjectStore('kv');
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        } catch (e) { reject(e); }
+    });
+}
+async function idbSet(key, val) {
+    const db = await openIDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put(val, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+async function idbGet(key) {
+    const db = await openIDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction('kv', 'readonly').objectStore('kv').get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+// ---------- Demo content ----------
+const DEMO_WELCOME = `# Добро пожаловать в Graphite
+
+**Graphite** — минимальное приложение для markdown-заметок, работающее прямо в браузере. **Приложение сделано полностью через ИИ, могут быть ошибки.**
+
+Ты сейчас в **песочнице** — заметки сохраняются локально в этом браузере и переживают перезагрузку. Когда будешь готов — нажми **«Перенести в папку»** вверху: все заметки из песочницы автоматически переедут в \`.md\`-файлы на диске.
+
+## С чего начать
+
+- Пиши в редакторе слева
+- Смотри предпросмотр справа
+- Используй панель инструментов сверху
+- Поиск в заметке — \`Ctrl+F\`
+- Поиск по всем файлам — вкладка «Поиск»
+
+## Возможности
+
+| Функция | Горячая клавиша |
+|---|---|
+| Жирный | Ctrl+B |
+| Курсив | Ctrl+I |
+| Найти в заметке | Ctrl+F |
+| Сохранить | Ctrl+S |
+
+> **Совет:** закрой эту вкладку и открой снова — заметка останется на месте. Это и есть песочница.
+
+## Форматирование
+
+Можно использовать **жирный**, *курсив*, ~~зачёркнутый~~ и \`код\`.
+
+\`\`\`javascript
+function hello() {
+  console.log("Привет, Graphite!");
+}
+\`\`\`
+
+- Пункт списка
+- Ещё один
+
+1. Первый
+2. Второй
+
+- [ ] Задача не выполнена
+- [x] Задача выполнена
+
+[Ссылка](https://example.com)
+
+---
+
+Приятной работы! ✨
+`;
+
+// ---------- Real vault ----------
+class VaultManager {
+    constructor() { this.rootHandle = null; this.files = new Map(); this.isSandbox = false; }
+
+    async open() {
+        try {
+            this.rootHandle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'graphite-vault' });
+            this.files.clear();
+            await this.scanDirectory(this.rootHandle, "");
+            return true;
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error(e);
+            return false;
+        }
+    }
+
+    async scanDirectory(dirHandle, path) {
+        for await (const entry of dirHandle.values()) {
+            if (entry.name.startsWith('.')) continue;
+            const entryPath = path ? `${path}/${entry.name}` : entry.name;
+            if (entry.kind === 'directory') {
+                this.files.set(entryPath, { handle: entry, isDir: true, name: entry.name });
+                await this.scanDirectory(entry, entryPath);
+            } else if (entry.name.toLowerCase().endsWith('.md')) {
+                this.files.set(entryPath, { handle: entry, isDir: false, name: entry.name });
             }
+        }
+    }
 
-            async open() {
+    async readFile(path) {
+        const entry = this.files.get(path);
+        if (!entry || entry.isDir) return "";
+        const file = await entry.handle.getFile();
+        return await file.text();
+    }
+
+    async writeFile(path, content) {
+        const entry = this.files.get(path);
+        if (!entry || entry.isDir) return;
+        const w = await entry.handle.createWritable();
+        await w.write(content);
+        await w.close();
+    }
+
+    async createNote(parentPath, name = "Новая заметка") {
+        const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
+        let fileName = name.endsWith('.md') ? name : `${name}.md`;
+        let finalName = fileName, count = 1;
+        let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        while (this.files.has(testPath)) {
+            const ext = fileName.substring(fileName.lastIndexOf('.'));
+            const base = fileName.substring(0, fileName.lastIndexOf('.'));
+            finalName = `${base} ${count}${ext}`;
+            testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+            count++;
+        }
+        const fh = await parentEntry.getFileHandle(finalName, { create: true });
+        const w = await fh.createWritable();
+        await w.write(`# ${finalName.replace('.md', '')}\n\n`);
+        await w.close();
+        const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        this.files.set(newPath, { handle: fh, isDir: false, name: finalName });
+        return newPath;
+    }
+
+    async createFolder(parentPath, name = "Новая папка") {
+        const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
+        let finalName = name, count = 1;
+        let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        while (this.files.has(testPath)) {
+            finalName = `${name} ${count}`;
+            testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+            count++;
+        }
+        const dh = await parentEntry.getDirectoryHandle(finalName, { create: true });
+        const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        this.files.set(newPath, { handle: dh, isDir: true, name: finalName });
+        return newPath;
+    }
+
+    async deleteFile(path) {
+        const entry = this.files.get(path);
+        if (!entry || entry.isDir) return;
+        const parts = path.split('/');
+        const fileName = parts.pop();
+        const parentPath = parts.join('/');
+        const parentHandle = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
+        await parentHandle.removeEntry(fileName);
+        this.files.delete(path);
+    }
+
+    async writeFileAtPath(path, content) {
+        const parts = path.split('/');
+        let fileName = parts.pop();
+        let currentHandle = this.rootHandle, currentPath = '';
+        for (const part of parts) {
+            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            if (this.files.has(currentPath) && this.files.get(currentPath).isDir) {
+                currentHandle = this.files.get(currentPath).handle;
+            } else {
+                currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+                this.files.set(currentPath, { handle: currentHandle, isDir: true, name: part });
+            }
+        }
+        let candidate = fileName;
+        let finalPath = currentPath ? `${currentPath}/${candidate}` : candidate;
+        let counter = 1;
+        while (this.files.has(finalPath)) {
+            const base = fileName.replace(/\.md$/, '');
+            candidate = `${base} (${counter}).md`;
+            finalPath = currentPath ? `${currentPath}/${candidate}` : candidate;
+            counter++;
+        }
+        const fh = await currentHandle.getFileHandle(candidate, { create: true });
+        const w = await fh.createWritable();
+        await w.write(content);
+        await w.close();
+        this.files.set(finalPath, { handle: fh, isDir: false, name: candidate });
+        return finalPath;
+    }
+}
+
+async function ensureGraphiteFolder(parent) {
+    const name = (parent.name || '').toLowerCase();
+    const entries = [];
+    try { for await (const e of parent.values()) entries.push(e.name); } catch (e) {}
+    const hasMd = entries.some(n => n.toLowerCase().endsWith('.md'));
+    if (name === 'graphite' || entries.length === 0 || hasMd) return { handle: parent, created: false };
+    try {
+        const sub = await parent.getDirectoryHandle('Graphite', { create: true });
+        return { handle: sub, created: true };
+    } catch (e) { return { handle: parent, created: false }; }
+}
+
+// ---------- Sandbox ----------
+class SandboxVault {
+    constructor() {
+        this.storageKey = 'graphite:sandbox';
+        this.rootHandle = { name: 'Песочница' };
+        this.files = new Map(); this.contents = new Map(); this.isSandbox = true;
+        this.load();
+    }
+    load() {
+        try {
+            const raw = localStorage.getItem(this.storageKey);
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (data.files) for (const [p, e] of Object.entries(data.files)) this.files.set(p, e);
+            if (data.contents) for (const [p, c] of Object.entries(data.contents)) this.contents.set(p, c);
+        } catch (e) { console.error('Sandbox load failed:', e); }
+    }
+    save() {
+        try {
+            const files = {}, contents = {};
+            for (const [p, e] of this.files) files[p] = { isDir: !!e.isDir, name: e.name };
+            for (const [p, c] of this.contents) contents[p] = c;
+            localStorage.setItem(this.storageKey, JSON.stringify({ files, contents }));
+        } catch (e) { console.error('Sandbox save failed:', e); }
+    }
+    seedIfEmpty() {
+        if (this.files.size > 0) return;
+        this.files.set('Добро пожаловать.md', { handle: null, isDir: false, name: 'Добро пожаловать.md' });
+        this.contents.set('Добро пожаловать.md', DEMO_WELCOME);
+        this.files.set('Заметки', { handle: null, isDir: true, name: 'Заметки' });
+        this.files.set('Заметки/Идеи.md', { handle: null, isDir: false, name: 'Идеи.md' });
+        this.contents.set('Заметки/Идеи.md',
+            '# Идеи\n\n- [ ] Попробовать локальное хранилище\n- [x] Открыть Graphite\n- [ ] Написать свою первую заметку\n\n## Мысли\n\n> Лучшее приложение — то, что не мешает думать.\n');
+        this.save();
+    }
+    async readFile(path) { return this.contents.get(path) || ''; }
+    async writeFile(path, content) { this.contents.set(path, content); this.save(); }
+    async createNote(parentPath, name = "Новая заметка") {
+        let fileName = name.endsWith('.md') ? name : `${name}.md`;
+        let finalName = fileName;
+        let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        let count = 1;
+        while (this.files.has(testPath)) {
+            const base = fileName.substring(0, fileName.lastIndexOf('.'));
+            finalName = `${base} ${count}.md`;
+            testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+            count++;
+        }
+        this.files.set(testPath, { handle: null, isDir: false, name: finalName });
+        this.contents.set(testPath, `# ${finalName.replace('.md', '')}\n\n`);
+        this.save();
+        return testPath;
+    }
+    async createFolder(parentPath, name = "Новая папка") {
+        let finalName = name;
+        let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+        let count = 1;
+        while (this.files.has(testPath)) {
+            finalName = `${name} ${count}`;
+            testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
+            count++;
+        }
+        this.files.set(testPath, { handle: null, isDir: true, name: finalName });
+        this.save();
+        return testPath;
+    }
+    async deleteFile(path) { this.files.delete(path); this.contents.delete(path); this.save(); }
+    clear() { this.files.clear(); this.contents.clear(); try { localStorage.removeItem(this.storageKey); } catch (e) {} }
+}
+
+async function tryRestoreVault() {
+    try {
+        const handle = await idbGet('vault-handle');
+        if (!handle || typeof handle.queryPermission !== 'function') return { vault: null, handle: null };
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') return { vault: null, handle };
+        const vault = new VaultManager();
+        vault.rootHandle = handle;
+        await vault.scanDirectory(handle, '');
+        return { vault, handle };
+    } catch (e) {
+        console.warn('Vault restore failed:', e);
+        return { vault: null, handle: null };
+    }
+}
+
+// ---------- App ----------
+class GraphiteApp {
+    constructor() {
+        this.vault = null;
+        this.currentFilePath = null;
+        this.isDirty = false;
+        this.saveTimeout = null;
+        this.renderTimeout = null;
+        this.currentTab = 'files';
+        this.expandedPaths = new Set();
+        this.pendingReconnectHandle = null;
+        this.viewMode = 'split';
+        this.focusMode = false;
+        this._hlRaf = null;
+        this.isHomeMode = false;
+        this.MOBILE_BP = '(max-width: 768px)';
+        this.initUI();
+        this.loadSettings();
+        this.bindEvents();
+        this.boot();
+    }
+
+    isMobile() { return window.matchMedia(this.MOBILE_BP).matches; }
+
+    initUI() {
+        this.mainApp = document.getElementById('main-app');
+        this.editor = document.getElementById('editor');
+        this.highlight = document.getElementById('highlight');
+        this.scroller = document.getElementById('editor-scroller');
+        this.editorInner = document.getElementById('editor-inner');
+        this.preview = document.getElementById('preview');
+        this.fileNameEl = document.getElementById('file-name');
+        this.fileStatusEl = document.getElementById('file-status');
+        this.fileTreeEl = document.getElementById('file-tree');
+        this.searchTreeEl = document.getElementById('search-tree');
+        this.noteCountEl = document.getElementById('note-count');
+        this.vaultPathEl = document.getElementById('vault-path');
+        this.sandboxBannerEl = document.getElementById('sandbox-banner');
+        this.reconnectBannerEl = document.getElementById('reconnect-banner');
+        this.storagePill = document.getElementById('storage-pill');
+        this.storageText = document.getElementById('storage-text');
+        this.storageAction = document.getElementById('storage-action');
+        this.sidebarEl = document.getElementById('sidebar');
+        this.backdropEl = document.getElementById('sidebar-backdrop');
+    }
+
+    bindEvents() {
+        document.getElementById('btn-open-vault-header').addEventListener('click', () => this.openVault('open'));
+        document.getElementById('btn-open-vault-banner').addEventListener('click', () => { track('sandbox_banner_cta_clicked'); this.openVault('create'); });
+        document.getElementById('btn-dismiss-banner').addEventListener('click', () => this.dismissSandboxBanner());
+        document.getElementById('btn-reconnect').addEventListener('click', () => this.reconnectVault());
+        this.storageAction.addEventListener('click', () => { if (this.vault && this.vault.isSandbox) this.openVault('create'); });
+
+        document.querySelectorAll('.view-mode-btn').forEach(btn => btn.addEventListener('click', () => this.setViewMode(btn.dataset.mode)));
+        document.getElementById('btn-focus').addEventListener('click', () => this.toggleFocusMode());
+        document.getElementById('btn-home').addEventListener('click', () => this.showHome());
+
+        // Mobile: drawer & bottom bar
+        document.getElementById('btn-close-drawer').addEventListener('click', () => this.closeMobileDrawer());
+        this.backdropEl.addEventListener('click', () => this.closeMobileDrawer());
+        document.getElementById('mob-btn-files').addEventListener('click', () => {
+            track('mobile_drawer_opened');
+            this.openMobileDrawer();
+        });
+        document.getElementById('mob-btn-mode').addEventListener('click', () => {
+            if (this.isHomeMode) return;
+            const next = this.viewMode === 'read' ? 'edit' : 'read';
+            this.setViewMode(next);
+            track('mobile_mode_toggled', { to: next });
+        });
+        document.getElementById('mob-btn-new').addEventListener('click', () => {
+            track('mobile_note_created_from_bar');
+            this.createNote();
+        });
+        document.getElementById('mob-btn-home').addEventListener('click', () => {
+            this.showHome();
+        });
+
+        document.getElementById('ob-btn-vault').addEventListener('click', () => { track('onboarding_create_clicked'); this.chooseVaultFromOnboarding('create'); });
+        document.getElementById('ob-btn-open').addEventListener('click', () => { track('onboarding_open_clicked'); this.chooseVaultFromOnboarding('open'); });
+        document.getElementById('ob-btn-sandbox').addEventListener('click', () => { track('onboarding_sandbox_clicked'); this.hideOnboarding(); this.enterSandbox(); });
+
+        document.getElementById('btn-new-note').addEventListener('click', () => this.createNote());
+        document.getElementById('btn-new-folder').addEventListener('click', () => this.createFolder());
+        document.getElementById('btn-refresh').addEventListener('click', () => this.refreshTree());
+        document.getElementById('btn-reset-sandbox').addEventListener('click', () => this.resetSandbox());
+
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => this.switchTab(btn.dataset.tab)));
+
+        this.editor.addEventListener('input', () => this.onEditorInput());
+        document.getElementById('search-input').addEventListener('input', (e) => this.refreshTree(e.target.value));
+        document.getElementById('find-input').addEventListener('input', () => this.updateFindCount());
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 's') { e.preventDefault(); this.saveCurrent(); }
+                else if (e.key === 'b') { e.preventDefault(); this.wrapSelection('**'); }
+                else if (e.key === 'i') { e.preventDefault(); this.wrapSelection('*'); }
+                else if (e.key === 'f') { e.preventDefault(); this.showFind(); }
+                else if (e.key === '1') { e.preventDefault(); this.setViewMode('edit'); }
+                else if (e.key === '2') { e.preventDefault(); this.setViewMode('split'); }
+                else if (e.key === '3') { e.preventDefault(); this.setViewMode('read'); }
+                else if (e.key === 'n') { e.preventDefault(); if (this.vault) this.createNote(); }
+            } else if (e.key === 'Escape') {
+                this.hideFind();
+                this.closeMobileDrawer();
+            }
+        });
+
+        document.getElementById('setting-theme').addEventListener('change', (e) => this.applyTheme(e.target.value));
+        document.getElementById('setting-font-size').addEventListener('input', (e) => {
+            const size = e.target.value;
+            document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
+            document.getElementById('font-size-val').textContent = `${size}px`;
+            localStorage.setItem('fontSize', size);
+            this.updateHighlight();
+            this.syncEditorHeight();
+        });
+
+        const onResize = () => {
+            this.syncEditorHeight();
+            if (this.isMobile() && this.viewMode === 'split') this.setViewMode('edit');
+            if (!this.isMobile()) this.closeMobileDrawer();
+        };
+        window.addEventListener('resize', onResize);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => this.syncEditorHeight());
+        }
+
+        this.updateMobileModeBtn();
+    }
+
+    openMobileDrawer() {
+        if (!this.isMobile()) return;
+        this.sidebarEl.classList.add('mobile-open');
+        this.backdropEl.classList.add('show');
+    }
+    closeMobileDrawer() {
+        this.sidebarEl.classList.remove('mobile-open');
+        this.backdropEl.classList.remove('show');
+    }
+    updateMobileModeBtn() {
+        const icon = document.getElementById('mob-mode-icon');
+        const label = document.getElementById('mob-mode-label');
+        if (!icon || !label) return;
+        if (this.viewMode === 'read') {
+            icon.textContent = '✏️';
+            label.textContent = 'Правка';
+        } else {
+            icon.textContent = '👁';
+            label.textContent = 'Читать';
+        }
+    }
+
+    updateHighlight() {
+        const text = this.editor.value;
+        this.highlight.innerHTML = text ? highlightMarkdown(text) : '';
+        this.syncEditorHeight();
+    }
+    syncEditorHeight() {
+        const ta = this.editor;
+        ta.style.height = '1px';
+        const h = Math.max(ta.scrollHeight, this.scroller.clientHeight || 1);
+        ta.style.height = h + 'px';
+        this.highlight.style.height = h + 'px';
+        this.editorInner.style.minHeight = h + 'px';
+    }
+    scheduleHighlightAndResize() {
+        if (this._hlRaf) return;
+        this._hlRaf = requestAnimationFrame(() => { this._hlRaf = null; this.updateHighlight(); });
+    }
+
+    setViewMode(mode) {
+        if (!['edit', 'split', 'read'].includes(mode)) return;
+        if (this.isMobile() && mode === 'split') mode = 'edit';
+        const prev = this.viewMode;
+        this.viewMode = mode;
+        localStorage.setItem('graphite:viewMode', mode);
+        document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        const editorWrap = document.getElementById('editor-wrap');
+        const preview = this.preview;
+        if (mode === 'edit') {
+            editorWrap.style.display = 'flex';
+            editorWrap.style.flex = '1';
+            preview.style.display = 'none';
+            preview.style.borderLeft = 'none';
+        } else if (mode === 'split') {
+            editorWrap.style.display = 'flex';
+            editorWrap.style.flex = '1';
+            preview.style.display = 'block';
+            preview.style.flex = '1';
+            preview.style.borderLeft = '1px solid var(--border)';
+        } else {
+            editorWrap.style.display = 'none';
+            preview.style.display = 'block';
+            preview.style.flex = '1';
+            preview.style.borderLeft = 'none';
+        }
+        if (mode !== 'read') this.syncEditorHeight();
+        if (prev !== mode) track('view_mode_changed', { from: prev, to: mode });
+        this.updateMobileModeBtn();
+    }
+
+    toggleFocusMode() {
+        this.focusMode = !this.focusMode;
+        document.body.classList.toggle('focus-mode', this.focusMode);
+        document.getElementById('btn-focus').classList.toggle('active', this.focusMode);
+        track('focus_mode_toggled', { on: this.focusMode });
+    }
+
+    showHome() {
+        if (this.isDirty && this.currentFilePath) this.saveCurrent().catch(e => console.error(e));
+        this.hideFind();
+        this.currentFilePath = null;
+        this.isHomeMode = true;
+        document.body.classList.add('home-mode');
+        document.title = 'Graphite';
+        this.fileNameEl.textContent = 'Без названия';
+        this.setStatus('');
+        this.renderHome();
+        this.closeMobileDrawer();
+        track('home_viewed', {
+            sandbox: this.vault ? !!this.vault.isSandbox : false,
+            note_count: this.vault ? [...this.vault.files.values()].filter(e => !e.isDir).length : 0
+        });
+    }
+    hideHome() {
+        if (!this.isHomeMode) return;
+        this.isHomeMode = false;
+        document.body.classList.remove('home-mode');
+    }
+    renderHome() {
+        if (!this.vault) return;
+        this.renderTemplates();
+        this.renderStorageCard();
+        this.renderRecent();
+    }
+
+    getTemplates() {
+        const now = new Date();
+        const yyyy = now.getFullYear(), mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
+        const dailyName = `${yyyy}-${mm}-${dd}`;
+        const dateStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        return {
+            blank: { icon: '📝', title: 'Пустая заметка', desc: 'Начать с чистого листа', name: 'Новая заметка', content: () => `# Новая заметка\n\n` },
+            daily: { icon: '📅', title: 'Ежедневник', desc: `Заметка на ${dateStr}`, name: dailyName, content: () => `# ${dateStr}\n\n## Что сделано\n\n- \n\n## Что в работе\n\n- \n\n## Мысли\n\n` },
+            ideas: { icon: '💡', title: 'Идеи', desc: 'Список идей и гипотез', name: 'Идеи', content: () => `# Идеи\n\n- [ ] \n- [ ] \n- [ ] \n\n> Что ещё?\n` },
+            meeting: { icon: '🗣️', title: 'Встреча', desc: 'Повестка, решения, задачи', name: `Встреча ${dailyName}`, content: (n) => `# ${n}\n\n**Дата:** ${dateStr}\n**Участники:** \n\n## Повестка\n\n1. \n2. \n\n## Решения\n\n- \n\n## Задачи\n\n- [ ] \n` }
+        };
+    }
+
+    renderTemplates() {
+        const container = document.getElementById('home-templates');
+        if (!container) return;
+        const templates = this.getTemplates();
+        container.innerHTML = Object.entries(templates).map(([key, t]) => `
+            <button class="home-template" data-template="${key}">
+                <span class="home-template-icon">${t.icon}</span>
+                <span class="home-template-body">
+                    <div class="home-template-title">${t.title}</div>
+                    <div class="home-template-desc">${t.desc}</div>
+                </span>
+            </button>`).join('');
+        container.querySelectorAll('.home-template').forEach(btn =>
+            btn.addEventListener('click', () => this.createNoteFromTemplate(btn.dataset.template)));
+    }
+
+    async createNoteFromTemplate(key) {
+        if (!this.vault) return;
+        const t = this.getTemplates()[key];
+        if (!t) return;
+        try {
+            const path = await this.vault.createNote(null, t.name);
+            const name = path.split('/').pop().replace(/\.md$/, '');
+            await this.vault.writeFile(path, t.content(name));
+            this.refreshTree();
+            this.openNote(path);
+            track('template_used', { template: key, sandbox: this.vault.isSandbox });
+        } catch (e) {
+            console.error(e);
+            alert('Не удалось создать заметку');
+        }
+    }
+
+    renderStorageCard() {
+        const card = document.getElementById('home-storage-card');
+        if (!card || !this.vault) return;
+        if (this.pendingReconnectHandle) {
+            card.className = 'home-storage-card reconnect';
+            card.innerHTML = `
+                <div class="home-storage-icon">🔌</div>
+                <div class="home-storage-body">
+                    <div class="home-storage-title">Папка не подключена</div>
+                    <div class="home-storage-desc">Браузер сбросил доступ к папке. Переподключите — ваши .md-файлы на месте.</div>
+                </div>
+                <button class="home-storage-cta" id="home-storage-cta">Переподключить →</button>`;
+            card.querySelector('#home-storage-cta').addEventListener('click', () => this.reconnectVault());
+            return;
+        }
+        if (this.vault.isSandbox) {
+            const count = [...this.vault.files.values()].filter(e => !e.isDir).length;
+            card.className = 'home-storage-card sandbox';
+            card.innerHTML = `
+                <div class="home-storage-icon">⚠️</div>
+                <div class="home-storage-body">
+                    <div class="home-storage-title">Заметки только в этом браузере</div>
+                    <div class="home-storage-desc">${count} ${this.pluralize(count, ['заметка', 'заметки', 'заметок'])}. Очистка данных браузера удалит их. Перенесите в папку — станут .md-файлами.</div>
+                </div>
+                <button class="home-storage-cta" id="home-storage-cta">→ В папку</button>`;
+            card.querySelector('#home-storage-cta').addEventListener('click', () => {
+                track('home_storage_cta_clicked');
+                this.openVault('create');
+            });
+            return;
+        }
+        const name = (this.vault.rootHandle && this.vault.rootHandle.name) || 'папка';
+        const count = [...this.vault.files.values()].filter(e => !e.isDir).length;
+        card.className = 'home-storage-card vault';
+        card.innerHTML = `
+            <div class="home-storage-icon">✓</div>
+            <div class="home-storage-body">
+                <div class="home-storage-title">Заметки на диске</div>
+                <div class="home-storage-desc">${count} ${this.pluralize(count, ['заметка', 'заметки', 'заметок'])} · папка <code>${escapeHtml(name)}</code>. Открываются в любом редакторе.</div>
+            </div>`;
+    }
+
+    renderRecent() {
+        const section = document.getElementById('home-recent-section');
+        const list = document.getElementById('home-recent-list');
+        const title = document.getElementById('home-recent-title');
+        if (!section || !list || !this.vault) return;
+        let recent = this.getRecentNotes();
+        const fromRecent = recent.length > 0;
+        if (!fromRecent) {
+            recent = [...this.vault.files.entries()].filter(([_, e]) => !e.isDir).map(([p]) => p).slice(0, 4);
+        }
+        if (recent.length === 0) { section.style.display = 'none'; return; }
+        section.style.display = 'block';
+        if (title) title.textContent = fromRecent ? 'Недавние' : 'Заметки';
+        const paths = recent;
+        list.innerHTML = paths.map((path, i) => {
+            if (!this.vault.files.get(path)) return '';
+            const name = path.split('/').pop().replace(/\.md$/, '');
+            const dir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+            return `<button class="home-recent-item" data-index="${i}">
+                <span class="home-recent-icon">📄</span>
+                <span class="home-recent-name">${escapeHtml(name)}</span>
+                ${dir ? `<span class="home-recent-path">${escapeHtml(dir)}</span>` : ''}
+            </button>`;
+        }).join('');
+        list.querySelectorAll('.home-recent-item').forEach(btn =>
+            btn.addEventListener('click', () => this.openNote(paths[+btn.dataset.index])));
+    }
+
+    getRecentNotes() {
+        try {
+            return JSON.parse(localStorage.getItem('graphite:recent') || '[]')
+                .filter(p => this.vault && this.vault.files.has(p) && !this.vault.files.get(p).isDir);
+        } catch (e) { return []; }
+    }
+    recordRecent(path) {
+        try {
+            let recent = JSON.parse(localStorage.getItem('graphite:recent') || '[]');
+            recent = recent.filter(p => p !== path);
+            recent.unshift(path);
+            localStorage.setItem('graphite:recent', JSON.stringify(recent.slice(0, 5)));
+        } catch (e) {}
+    }
+
+    async boot() {
+        const savedMode = localStorage.getItem('graphite:viewMode');
+        if (savedMode && ['edit', 'split', 'read'].includes(savedMode)) this.setViewMode(savedMode);
+        else if (this.isMobile()) this.setViewMode('edit');
+        const restored = await tryRestoreVault();
+        if (restored.vault) {
+            this.hideOnboarding();
+            this.adoptVault(restored.vault);
+            track('vault_resumed');
+            return;
+        }
+        if (restored.handle) {
+            this.pendingReconnectHandle = restored.handle;
+            const sandbox = new SandboxVault();
+            sandbox.seedIfEmpty();
+            this.hideOnboarding();
+            this.adoptSandbox(sandbox);
+            this.showReconnectBanner();
+            track('vault_permission_lost');
+            return;
+        }
+        const sandbox = new SandboxVault();
+        if (sandbox.files.size > 0) {
+            this.hideOnboarding();
+            this.adoptSandbox(sandbox);
+            track('sandbox_resumed');
+            return;
+        }
+        this.showOnboarding();
+    }
+
+    showOnboarding() {
+        const overlay = document.getElementById('onboarding-overlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        const supported = ('showDirectoryPicker' in window);
+        const vaultBtn = document.getElementById('ob-btn-vault');
+        const openBtn = document.getElementById('ob-btn-open');
+        const unsupportedNote = document.getElementById('ob-unsupported-note');
+        const sandboxBtn = document.getElementById('ob-btn-sandbox');
+        if (!supported) {
+            vaultBtn.style.display = 'none';
+            openBtn.style.display = 'none';
+            unsupportedNote.style.display = 'block';
+            sandboxBtn.querySelector('b').textContent = 'Начать';
+            sandboxBtn.style.color = 'var(--text)';
+        }
+        track('onboarding_shown', { fs_api_supported: supported });
+    }
+    hideOnboarding() {
+        const overlay = document.getElementById('onboarding-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+    async chooseVaultFromOnboarding(mode) {
+        this.hideOnboarding();
+        const ok = await this.openVault(mode);
+        if (!ok && !document.getElementById('sandbox-banner').dataset.seeded) this.enterSandbox();
+    }
+
+    adoptVault(vault) {
+        this.vault = vault;
+        this.currentFilePath = null;
+        this.isDirty = false;
+        this.expandedPaths.clear();
+        this.pendingReconnectHandle = null;
+        this.editor.value = '';
+        this.highlight.innerHTML = '';
+        this.preview.innerHTML = '';
+        this.fileNameEl.textContent = 'Без названия';
+        document.title = 'Graphite';
+        this.setStatus('');
+        this.updateStats();
+        this.reconnectBannerEl.style.display = 'none';
+        this.sandboxBannerEl.style.display = 'none';
+        this.vaultPathEl.textContent = '📁 ' + (vault.rootHandle.name || 'Папка');
+        this.refreshTree();
+        this.updateStorageStatus();
+        const lastPath = localStorage.getItem('graphite:lastOpened');
+        if (lastPath && vault.files.has(lastPath) && !vault.files.get(lastPath).isDir) this.openNote(lastPath);
+        else this.showHome();
+    }
+
+    adoptSandbox(sandbox) {
+        this.vault = sandbox;
+        this.currentFilePath = null;
+        this.isDirty = false;
+        this.expandedPaths.clear();
+        this.editor.value = '';
+        this.highlight.innerHTML = '';
+        this.preview.innerHTML = '';
+        this.fileNameEl.textContent = 'Без названия';
+        document.title = 'Graphite';
+        this.setStatus('');
+        this.updateStats();
+        const dismissed = sessionStorage.getItem('graphite:banner-dismissed') === '1';
+        if (!this.pendingReconnectHandle) this.updateSandboxBanner(!dismissed);
+        this.vaultPathEl.textContent = '🧪 Песочница (этот браузер)';
+        this.refreshTree();
+        this.updateStorageStatus();
+        const lastPath = localStorage.getItem('graphite:lastOpened');
+        if (lastPath && sandbox.files.has(lastPath) && !sandbox.files.get(lastPath).isDir) this.openNote(lastPath);
+        else this.showHome();
+    }
+
+    enterSandbox() {
+        const sandbox = new SandboxVault();
+        const wasEmpty = sandbox.files.size === 0;
+        sandbox.seedIfEmpty();
+        if (wasEmpty) track('sandbox_seeded');
+        this.adoptSandbox(sandbox);
+    }
+
+    updateSandboxBanner(show) {
+        if (this.pendingReconnectHandle) { this.sandboxBannerEl.style.display = 'none'; return; }
+        this.sandboxBannerEl.style.display = show ? 'flex' : 'none';
+        if (show && this.vault) {
+            const count = [...this.vault.files.values()].filter(e => !e.isDir).length;
+            const sub = document.getElementById('sandbox-sub');
+            if (sub) sub.textContent = `Сейчас здесь ${count} ${this.pluralize(count, ['заметка','заметки','заметок'])}. Очистка данных браузера удалит их навсегда. Перенесите в папку — они станут .md-файлами.`;
+        }
+    }
+    dismissSandboxBanner() {
+        sessionStorage.setItem('graphite:banner-dismissed', '1');
+        this.updateSandboxBanner(false);
+        track('sandbox_banner_dismissed');
+    }
+    showReconnectBanner() {
+        this.reconnectBannerEl.style.display = 'flex';
+        this.sandboxBannerEl.style.display = 'none';
+    }
+    updateStorageStatus() {
+        if (!this.vault) return;
+        if (this.vault.isSandbox) {
+            this.storagePill.className = 'storage-pill sandbox';
+            this.storageText.textContent = 'Только в этом браузере';
+            this.storageAction.style.display = '';
+            this.storageAction.textContent = '→ В папку';
+        } else {
+            this.storagePill.className = 'storage-pill vault';
+            this.storageText.textContent = (this.vault.rootHandle.name || 'Папка') + ' · на диске';
+            this.storageAction.style.display = 'none';
+        }
+    }
+
+    async openVault(mode = 'open') {
+        if (!('showDirectoryPicker' in window)) {
+            alert("Ваш браузер не поддерживает File System Access API.\nПожалуйста, используйте Chrome, Edge или Opera.\n\nПока ваши заметки в безопасности в песочнице — они сохраняются локально.");
+            return false;
+        }
+        let parent;
+        try {
+            parent = await window.showDirectoryPicker(mode === 'create'
+                ? { mode: 'readwrite', startIn: 'documents', id: 'graphite-parent' }
+                : { mode: 'readwrite', id: 'graphite-vault' });
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error(e);
+            return false;
+        }
+        let finalHandle = parent, created = false;
+        if (mode === 'create') {
+            const res = await ensureGraphiteFolder(parent);
+            finalHandle = res.handle;
+            created = res.created;
+        }
+        const vault = new VaultManager();
+        vault.rootHandle = finalHandle;
+        try { await vault.scanDirectory(finalHandle, ''); }
+        catch (e) { console.error(e); alert('Не удалось прочитать папку. Попробуйте другую.'); return false; }
+        track('vault_opened', { mode, created_subfolder: created });
+        await this.runSetupWizard(vault, parent, created);
+        return true;
+    }
+
+    async runSetupWizard(vault, parent, created) {
+        const overlay = document.getElementById('setup-wizard');
+        const stepsEl = document.getElementById('wizard-steps');
+        const actionsEl = document.getElementById('wizard-actions');
+        const titleEl = document.getElementById('wizard-title');
+        const eyebrowEl = document.getElementById('wizard-eyebrow');
+        const logoEl = document.getElementById('wizard-logo');
+        overlay.style.display = 'flex';
+        stepsEl.innerHTML = '';
+        actionsEl.innerHTML = '';
+        logoEl.classList.remove('done');
+        logoEl.textContent = 'G';
+        titleEl.textContent = 'Подключаем папку';
+        eyebrowEl.textContent = 'Настройка хранилища';
+        const fullPath = created ? `${parent.name}/${vault.rootHandle.name}` : vault.rootHandle.name;
+
+        const addStep = (id, label, hint) => {
+            const el = document.createElement('div');
+            el.className = 'wizard-step pending';
+            el.id = 'wstep-' + id;
+            el.innerHTML = `<span class="wstep-icon"></span><div class="wstep-body"><div class="wstep-label">${label}</div><div class="wstep-hint" id="wstep-hint-${id}">${hint || ''}</div></div>`;
+            stepsEl.appendChild(el);
+        };
+        const setStep = (id, status, hint) => {
+            const el = document.getElementById('wstep-' + id);
+            if (!el) return;
+            el.className = 'wizard-step ' + status;
+            if (hint !== undefined) {
+                const h = document.getElementById('wstep-hint-' + id);
+                if (h) h.textContent = hint;
+            }
+        };
+
+        addStep('pick', created ? 'Создана папка Graphite' : 'Папка подключена', fullPath);
+        await new Promise(r => setTimeout(r, 250));
+        setStep('pick', 'done', fullPath + ' · ' + [...vault.files.values()].filter(e => !e.isDir).length + ' файлов .md');
+
+        let pendingNotes = [];
+        try {
+            const pending = new SandboxVault();
+            pendingNotes = [...pending.files.entries()].filter(([_, e]) => !e.isDir);
+        } catch (e) {}
+
+        if (pendingNotes.length > 0) {
+            addStep('migrate', 'Переносим заметки из песочницы', `0 / ${pendingNotes.length}`);
+            await new Promise(r => setTimeout(r, 200));
+            const pending = new SandboxVault();
+            let migrated = 0;
+            for (const [path] of pendingNotes) {
                 try {
-                    this.rootHandle = await window.showDirectoryPicker();
-                    this.files.clear();
-                    await this.scanDirectory(this.rootHandle, "");
-                    return true;
-                } catch (e) {
-                    console.error(e);
-                    return false;
-                }
+                    const content = await pending.readFile(path);
+                    await vault.writeFileAtPath(path, content);
+                    migrated++;
+                    setStep('migrate', 'pending', `${migrated} / ${pendingNotes.length}`);
+                } catch (e) { console.error('Migrate failed:', path, e); }
             }
-
-            async scanDirectory(dirHandle, path) {
-                for await (const entry of dirHandle.values()) {
-                    if (entry.name.startsWith('.')) continue;
-                    const entryPath = path ? `${path}/${entry.name}` : entry.name;
-                    
-                    if (entry.kind === 'directory') {
-                        this.files.set(entryPath, { handle: entry, isDir: true, name: entry.name });
-                        await this.scanDirectory(entry, entryPath);
-                    } else if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.md')) {
-                        this.files.set(entryPath, { handle: entry, isDir: false, name: entry.name });
-                    }
-                }
-            }
-            
-            async readFile(path) {
-                const entry = this.files.get(path);
-                if (!entry || entry.isDir) return "";
-                const file = await entry.handle.getFile();
-                return await file.text();
-            }
-            
-            async writeFile(path, content) {
-                const entry = this.files.get(path);
-                if (!entry || entry.isDir) return;
-                const writable = await entry.handle.createWritable();
-                await writable.write(content);
-                await writable.close();
-            }
-            
-            async createNote(parentPath, name = "Новая заметка") {
-                const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
-                let fileName = name.endsWith('.md') ? name : `${name}.md`;
-                
-                let count = 1;
-                let finalName = fileName;
-                let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                while (this.files.has(testPath)) {
-                    const ext = fileName.substring(fileName.lastIndexOf('.'));
-                    const base = fileName.substring(0, fileName.lastIndexOf('.'));
-                    finalName = `${base} ${count}${ext}`;
-                    testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                    count++;
-                }
-                
-                const fileHandle = await parentEntry.getFileHandle(finalName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(`# ${finalName.replace('.md', '')}\n\n`);
-                await writable.close();
-                
-                const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                this.files.set(newPath, { handle: fileHandle, isDir: false, name: finalName });
-                return newPath;
-            }
-            
-            async createFolder(parentPath, name = "Новая папка") {
-                const parentEntry = parentPath ? this.files.get(parentPath).handle : this.rootHandle;
-                let finalName = name;
-                let count = 1;
-                let testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                while (this.files.has(testPath)) {
-                    finalName = `${name} ${count}`;
-                    testPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                    count++;
-                }
-                
-                const dirHandle = await parentEntry.getDirectoryHandle(finalName, { create: true });
-                const newPath = parentPath ? `${parentPath}/${finalName}` : finalName;
-                this.files.set(newPath, { handle: dirHandle, isDir: true, name: finalName });
-                return newPath;
+            if (migrated === pendingNotes.length) setStep('migrate', 'done', `Перенесено ${migrated} ${this.pluralize(migrated, ['заметка','заметки','заметок'])}`);
+            else if (migrated > 0) setStep('migrate', 'done', `Перенесено ${migrated} из ${pendingNotes.length} (остальные не удалось)`);
+            else setStep('migrate', 'error', 'Не удалось перенести заметки');
+            if (migrated > 0) {
+                try { pending.clear(); } catch (e) {}
+                track('migration_completed', { migrated, total: pendingNotes.length });
             }
         }
 
-        class GraphiteApp {
-            constructor() {
-                this.vault = new VaultManager();
-                this.currentFilePath = null;
-                this.isDirty = false;
-                this.saveTimeout = null;
-                this.renderTimeout = null;
-                this.currentTab = 'files';
-                this.expandedPaths = new Set();
-                
-                this.initUI();
-                this.loadSettings();
-                this.bindEvents();
-            }
-
-            initUI() {
-                this.welcomeScreen = document.getElementById('welcome-screen');
-                this.mainApp = document.getElementById('main-app');
-                this.editor = document.getElementById('editor');
-                this.preview = document.getElementById('preview');
-                this.fileNameEl = document.getElementById('file-name');
-                this.fileStatusEl = document.getElementById('file-status');
-                this.fileTreeEl = document.getElementById('file-tree');
-                this.searchTreeEl = document.getElementById('search-tree');
-                this.noteCountEl = document.getElementById('note-count');
-                this.vaultPathEl = document.getElementById('vault-path');
-            }
-
-            bindEvents() {
-                document.getElementById('btn-open-vault').addEventListener('click', () => this.openVault());
-                document.getElementById('btn-new-note').addEventListener('click', () => this.createNote());
-                document.getElementById('btn-new-folder').addEventListener('click', () => this.createFolder());
-                document.getElementById('btn-refresh').addEventListener('click', () => this.refreshTree());
-                
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
-                });
-
-                this.editor.addEventListener('input', () => this.onEditorInput());
-                document.getElementById('search-input').addEventListener('input', (e) => this.refreshTree(e.target.value));
-                document.getElementById('find-input').addEventListener('input', () => this.updateFindCount());
-                
-                document.addEventListener('keydown', (e) => {
-                    if (e.ctrlKey || e.metaKey) {
-                        if (e.key === 's') { e.preventDefault(); this.saveCurrent(); }
-                        else if (e.key === 'b') { e.preventDefault(); this.wrapSelection('**'); }
-                        else if (e.key === 'i') { e.preventDefault(); this.wrapSelection('*'); }
-                        else if (e.key === 'f') { e.preventDefault(); this.showFind(); }
-                    } else if (e.key === 'Escape') {
-                        this.hideFind();
-                    }
-                });
-
-                document.getElementById('setting-theme').addEventListener('change', (e) => this.applyTheme(e.target.value));
-                document.getElementById('setting-font-size').addEventListener('input', (e) => {
-                    const size = e.target.value;
-                    document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
-                    document.getElementById('font-size-val').textContent = `${size}px`;
-                    localStorage.setItem('fontSize', size);
-                });
-                document.getElementById('setting-wrap').addEventListener('change', (e) => {
-                    this.editor.style.whiteSpace = e.target.checked ? 'pre-wrap' : 'pre';
-                    this.editor.style.overflowX = e.target.checked ? 'hidden' : 'auto';
-                    localStorage.setItem('wrap', e.target.checked);
-                });
-            }
-
-            async openVault() {
-                if (!('showDirectoryPicker' in window)) {
-                    alert("Ваш браузер не поддерживает File System Access API.\nПожалуйста, используйте Chrome, Edge или Opera.");
-                    return;
-                }
-                
-                const success = await this.vault.open();
-                if (success) {
-                    this.welcomeScreen.style.display = 'none';
-                    this.mainApp.classList.add('active');
-                    this.vaultPathEl.textContent = this.vault.rootHandle.name;
-                    this.refreshTree();
-                }
-            }
-
-            switchTab(tab) {
-                this.currentTab = tab;
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-                document.getElementById('tab-files').style.display = tab === 'files' ? 'flex' : 'none';
-                document.getElementById('tab-search').style.display = tab === 'search' ? 'flex' : 'none';
-                document.getElementById('tab-settings').style.display = tab === 'settings' ? 'flex' : 'none';
-                if (tab === 'search') document.getElementById('search-input').focus();
-            }
-
-            async openNote(path) {
-                if (this.currentFilePath === path) return;
-                
-                if (this.isDirty) {
-                    if (!confirm("Есть несохранённые изменения. Сохранить?")) {
-                        this.isDirty = false;
-                    } else {
-                        await this.saveCurrent();
-                    }
-                }
-                
-                try {
-                    const content = await this.vault.readFile(path);
-                    this.editor.value = content;
-                    this.currentFilePath = path;
-                    this.fileNameEl.textContent = path.split('/').pop();
-                    this.isDirty = false;
-                    this.setStatus("Сохранено");
-                    this.updatePreview();
-                    this.refreshTree();
-                } catch (e) {
-                    console.error(e);
-                    alert("Ошибка чтения файла");
-                }
-            }
-
-            onEditorInput() {
-                this.isDirty = true;
-                this.setStatus("Изменено...", "dirty");
-                
-                clearTimeout(this.renderTimeout);
-                this.renderTimeout = setTimeout(() => this.updatePreview(), 300);
-                
-                clearTimeout(this.saveTimeout);
-                this.saveTimeout = setTimeout(() => this.saveCurrent(), 1500);
-            }
-
-            async saveCurrent() {
-                if (!this.currentFilePath || !this.isDirty) return;
-                
-                this.setStatus("Сохранение...", "dirty");
-                try {
-                    await this.vault.writeFile(this.currentFilePath, this.editor.value);
-                    this.isDirty = false;
-                    this.setStatus("Сохранено");
-                } catch (e) {
-                    console.error(e);
-                    this.setStatus("Ошибка сохранения", "error");
-                }
-            }
-
-            setStatus(text, cls = "") {
-                this.fileStatusEl.textContent = text;
-                this.fileStatusEl.className = cls;
-            }
-
-            updatePreview() {
-                const md = this.editor.value;
-                let html = marked.parse(md);
-                html = html.replace(/<li>\s*\[\s\]\s*/g, '<li><input type="checkbox" disabled> ');
-                html = html.replace(/<li>\s*\[x\]\s*/gi, '<li><input type="checkbox" checked disabled> ');
-                this.preview.innerHTML = html;
-            }
-
-            refreshTree(query = "") {
-                const treeContainer = this.currentTab === 'search' ? this.searchTreeEl : this.fileTreeEl;
-                treeContainer.innerHTML = '';
-                
-                const root = { name: 'root', children: [], isDir: true };
-                const nodes = { "": root };
-                
-                const sortedPaths = Array.from(this.vault.files.keys()).sort();
-                
-                for (const path of sortedPaths) {
-                    const entry = this.vault.files.get(path);
-                    if (query && !entry.isDir) {
-                        if (!entry.name.toLowerCase().includes(query.toLowerCase())) continue;
-                    }
-                    
-                    const parts = path.split('/');
-                    let currentParent = root;
-                    let currentPath = "";
-                    
-                    for (let i = 0; i < parts.length; i++) {
-                        const part = parts[i];
-                        currentPath = currentPath ? `${currentPath}/${part}` : part;
-                        
-                        if (!nodes[currentPath]) {
-                            const isDir = i < parts.length - 1; 
-                            const node = { name: part, path: currentPath, isDir: isDir, children: [] };
-                            nodes[currentPath] = node;
-                            currentParent.children.push(node);
-                        }
-                        currentParent = nodes[currentPath];
-                    }
-                }
-                
-                treeContainer.appendChild(this.buildTreeDOM(root));
-                
-                let count = 0;
-                for (const entry of this.vault.files.values()) {
-                    if (!entry.isDir) count++;
-                }
-                this.noteCountEl.textContent = `${count} ${this.pluralize(count, ['заметка', 'заметки', 'заметок'])}`;
-            }
-
-            buildTreeDOM(node, depth = 0) {
-                const fragment = document.createDocumentFragment();
-                
-                if (node.name !== 'root') {
-                    const item = document.createElement('div');
-                    item.className = 'tree-item ' + (node.isDir ? 'is-dir' : 'is-file');
-                    if (this.currentFilePath === node.path) item.classList.add('selected');
-                    
-                    item.style.paddingLeft = `${depth * 16 + 8}px`;
-                    item.dataset.path = node.path;
-                    
-                    const icon = document.createElement('span');
-                    icon.className = 'tree-icon';
-                    icon.textContent = node.isDir ? '📁' : '📄';
-                    
-                    const label = document.createElement('span');
-                    label.className = 'tree-label';
-                    label.textContent = node.name;
-                    
-                    item.appendChild(icon);
-                    item.appendChild(label);
-                    
-                    if (!node.isDir) {
-                        item.addEventListener('click', () => this.openNote(node.path));
-                    } else {
-                        item.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const isExpanded = item.classList.toggle('expanded');
-                            if (isExpanded) this.expandedPaths.add(node.path);
-                            else this.expandedPaths.delete(node.path);
-                            
-                            const childrenContainer = item.nextElementSibling;
-                            if (childrenContainer) {
-                                childrenContainer.style.display = isExpanded ? 'block' : 'none';
-                            }
-                        });
-                        
-                        if (this.expandedPaths.has(node.path)) {
-                            item.classList.add('expanded');
-                        }
-                    }
-                    fragment.appendChild(item);
-                }
-                
-                if (node.children.length > 0) {
-                    const childrenContainer = document.createElement('div');
-                    childrenContainer.className = 'tree-children';
-                    if (node.name !== 'root' && !this.expandedPaths.has(node.path)) {
-                        childrenContainer.style.display = 'none';
-                    }
-                    node.children.forEach(child => {
-                        childrenContainer.appendChild(this.buildTreeDOM(child, depth + 1));
-                    });
-                    fragment.appendChild(childrenContainer);
-                }
-                
-                return fragment;
-            }
-
-            pluralize(n, forms) {
-                n = Math.abs(n);
-                const n10 = n % 10;
-                const n100 = n % 100;
-                if (n10 === 1 && n100 !== 11) return forms[0];
-                if (n10 >= 2 && n10 <= 4 && (n100 < 11 || n100 > 14)) return forms[1];
-                return forms[2];
-            }
-
-            async createNote() {
-                const name = prompt("Имя новой заметки:", "Новая заметка");
-                if (!name) return;
-                
-                let parentPath = null;
-                const selected = document.querySelector('.tree-item.selected');
-                if (selected) {
-                    const path = selected.dataset.path;
-                    const entry = this.vault.files.get(path);
-                    if (entry && entry.isDir) parentPath = path;
-                    else if (path.includes('/')) parentPath = path.substring(0, path.lastIndexOf('/'));
-                }
-                
-                try {
-                    const path = await this.vault.createNote(parentPath, name);
-                    this.refreshTree();
-                    this.openNote(path);
-                } catch (e) {
-                    console.error(e);
-                    alert("Ошибка создания заметки");
-                }
-            }
-
-            async createFolder() {
-                const name = prompt("Имя новой папки:", "Новая папка");
-                if (!name) return;
-                
-                let parentPath = null;
-                const selected = document.querySelector('.tree-item.selected');
-                if (selected) {
-                    const path = selected.dataset.path;
-                    const entry = this.vault.files.get(path);
-                    if (entry && entry.isDir) parentPath = path;
-                    else if (path.includes('/')) parentPath = path.substring(0, path.lastIndexOf('/'));
-                }
-                
-                try {
-                    await this.vault.createFolder(parentPath, name);
-                    this.refreshTree();
-                } catch (e) {
-                    console.error(e);
-                    alert("Ошибка создания папки");
-                }
-            }
-
-            showFind() {
-                document.getElementById('find-bar').style.display = 'flex';
-                document.getElementById('find-input').focus();
-            }
-
-            hideFind() {
-                document.getElementById('find-bar').style.display = 'none';
-            }
-
-            findNext() {
-                const query = document.getElementById('find-input').value;
-                if (!query) return;
-                const text = this.editor.value;
-                const start = this.editor.selectionEnd;
-                let index = text.toLowerCase().indexOf(query.toLowerCase(), start);
-                if (index === -1) index = text.toLowerCase().indexOf(query.toLowerCase());
-                if (index !== -1) {
-                    this.editor.selectionStart = index;
-                    this.editor.selectionEnd = index + query.length;
-                    this.editor.focus();
-                }
-            }
-
-            findPrev() {
-                const query = document.getElementById('find-input').value;
-                if (!query) return;
-                const text = this.editor.value;
-                const start = this.editor.selectionStart;
-                let index = text.toLowerCase().lastIndexOf(query.toLowerCase(), start - 1);
-                if (index === -1) index = text.toLowerCase().lastIndexOf(query.toLowerCase());
-                if (index !== -1) {
-                    this.editor.selectionStart = index;
-                    this.editor.selectionEnd = index + query.length;
-                    this.editor.focus();
-                }
-            }
-
-            updateFindCount() {
-                const query = document.getElementById('find-input').value.toLowerCase();
-                if (!query) {
-                    document.getElementById('find-count').textContent = "";
-                    return;
-                }
-                const text = this.editor.value.toLowerCase();
-                let count = 0;
-                let pos = 0;
-                while ((pos = text.indexOf(query, pos)) !== -1) {
-                    count++;
-                    pos += query.length;
-                }
-                document.getElementById('find-count').textContent = count > 0 ? `${count} совпадений` : "нет совпадений";
-            }
-
-            wrapSelection(mark) {
-                const start = this.editor.selectionStart;
-                const end = this.editor.selectionEnd;
-                const text = this.editor.value;
-                const selected = text.substring(start, end);
-                
-                this.editor.value = text.substring(0, start) + mark + selected + mark + text.substring(end);
-                
-                if (selected.length === 0) {
-                    this.editor.selectionStart = this.editor.selectionEnd = start + mark.length;
-                } else {
-                    this.editor.selectionStart = start + mark.length;
-                    this.editor.selectionEnd = end + mark.length;
-                }
-                this.editor.focus();
-                this.editor.dispatchEvent(new Event('input'));
-            }
-
-            toggleLinePrefix(prefix) {
-                const start = this.editor.selectionStart;
-                const text = this.editor.value;
-                
-                let lineStart = text.lastIndexOf('\n', start - 1) + 1;
-                let lineEnd = text.indexOf('\n', start);
-                if (lineEnd === -1) lineEnd = text.length;
-                
-                const line = text.substring(lineStart, lineEnd);
-                const newLine = line.startsWith(prefix) ? line.substring(prefix.length) : prefix + line;
-                
-                this.editor.value = text.substring(0, lineStart) + newLine + text.substring(lineEnd);
-                this.editor.selectionStart = this.editor.selectionEnd = lineStart + newLine.length;
-                this.editor.focus();
-                this.editor.dispatchEvent(new Event('input'));
-            }
-
-            insertLink() {
-                const start = this.editor.selectionStart;
-                const end = this.editor.selectionEnd;
-                const text = this.editor.value;
-                const selected = text.substring(start, end) || "текст";
-                
-                const insertion = `[${selected}](url)`;
-                this.editor.value = text.substring(0, start) + insertion + text.substring(end);
-                
-                const urlStart = start + selected.length + 3;
-                this.editor.selectionStart = urlStart;
-                this.editor.selectionEnd = urlStart + 3;
-                this.editor.focus();
-                this.editor.dispatchEvent(new Event('input'));
-            }
-
-            insertImage() {
-                const start = this.editor.selectionStart;
-                const end = this.editor.selectionEnd;
-                const text = this.editor.value;
-                const selected = text.substring(start, end) || "alt";
-                
-                const insertion = `![${selected}](url)`;
-                this.editor.value = text.substring(0, start) + insertion + text.substring(end);
-                
-                const urlStart = start + selected.length + 4;
-                this.editor.selectionStart = urlStart;
-                this.editor.selectionEnd = urlStart + 3;
-                this.editor.focus();
-                this.editor.dispatchEvent(new Event('input'));
-            }
-
-            loadSettings() {
-                const theme = localStorage.getItem('theme') || 'Graphite Dark';
-                this.applyTheme(theme);
-                document.getElementById('setting-theme').value = theme;
-                
-                const fontSize = localStorage.getItem('fontSize') || '14';
-                document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
-                document.getElementById('setting-font-size').value = fontSize;
-                document.getElementById('font-size-val').textContent = `${fontSize}px`;
-                
-                const wrap = localStorage.getItem('wrap') !== 'false';
-                document.getElementById('setting-wrap').checked = wrap;
-                this.editor.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
-                this.editor.style.overflowX = wrap ? 'hidden' : 'auto';
-            }
-
-            applyTheme(name) {
-                const themes = {
-                    "Graphite Dark": { bg: "#1e1e1e", panel: "#252526", border: "#333333", text: "#d4d4d4", muted: "#8a8a8a", accent: "#7aa2f7", hover: "#2a2a2a", selection: "#35405a", code_bg: "#2d2d2d", error: "#f7768e" },
-                    "Midnight": { bg: "#0f1419", panel: "#151b23", border: "#232c36", text: "#c0caf5", muted: "#565f89", accent: "#bb9af7", hover: "#1a2230", selection: "#283457", code_bg: "#1a2230", error: "#f7768e" },
-                    "Nord": { bg: "#2e3440", panel: "#3b4252", border: "#434c5e", text: "#d8dee9", muted: "#7b88a1", accent: "#88c0d0", hover: "#434c5e", selection: "#4c566a", code_bg: "#3b4252", error: "#bf616a" },
-                    "Sepia Light": { bg: "#fbf1c7", panel: "#f0e6d2", border: "#d5c4a1", text: "#3c3836", muted: "#7c6f64", accent: "#b58900", hover: "#eee8d5", selection: "#ebdbb2", code_bg: "#f5e8c7", error: "#9d0006" }
-                };
-                
-                const theme = themes[name] || themes["Graphite Dark"];
-                const root = document.documentElement;
-                for (const [key, value] of Object.entries(theme)) {
-                    root.style.setProperty(`--${key}`, value);
-                }
-                localStorage.setItem('theme', name);
-            }
+        addStep('persist', 'Сохраняем доступ для следующих сессий', '');
+        try {
+            await idbSet('vault-handle', vault.rootHandle);
+            setStep('persist', 'done', 'Разрешение сохранено');
+        } catch (e) {
+            setStep('persist', 'error', 'Разрешение не сохранено — возможно, придётся подключить папку снова');
         }
 
-        const app = new GraphiteApp();
-    </script>
+        logoEl.classList.add('done');
+        logoEl.textContent = '✓';
+        eyebrowEl.textContent = 'Готово';
+        titleEl.textContent = 'Заметки на диске';
+
+        const success = document.createElement('div');
+        success.className = 'wizard-success';
+        success.innerHTML = `
+            <div class="wizard-success-icon">✓</div>
+            <div class="wizard-success-title">Хранилище подключено</div>
+            <div class="wizard-success-sub">Все ваши заметки теперь — <code>.md</code>-файлы в папке <code>${fullPath}</code>. Их можно открыть в любом редакторе и синхронизировать через Dropbox / iCloud.</div>`;
+        stepsEl.innerHTML = '';
+        stepsEl.appendChild(success);
+        actionsEl.innerHTML = '';
+        const contBtn = document.createElement('button');
+        contBtn.textContent = 'На главную →';
+        contBtn.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            sessionStorage.removeItem('graphite:banner-dismissed');
+            this.adoptVault(vault);
+        });
+        actionsEl.appendChild(contBtn);
+        contBtn.focus();
+        setTimeout(() => {
+            if (overlay.style.display !== 'none') {
+                overlay.style.display = 'none';
+                sessionStorage.removeItem('graphite:banner-dismissed');
+                this.adoptVault(vault);
+            }
+        }, 6000);
+    }
+
+    async reconnectVault() {
+        if (!this.pendingReconnectHandle) return;
+        try {
+            const perm = await this.pendingReconnectHandle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') {
+                alert('Без доступа к папке мы не можем её открыть. Попробуйте выбрать папку заново.');
+                return;
+            }
+            const vault = new VaultManager();
+            vault.rootHandle = this.pendingReconnectHandle;
+            await vault.scanDirectory(vault.rootHandle, '');
+            this.pendingReconnectHandle = null;
+            this.adoptVault(vault);
+            track('vault_reconnected');
+        } catch (e) {
+            console.error(e);
+            alert('Не удалось восстановить доступ к папке. Откройте её заново через 📁 в шапке.');
+        }
+    }
+
+    switchTab(tab) {
+        this.currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        document.getElementById('tab-files').style.display = tab === 'files' ? 'flex' : 'none';
+        document.getElementById('tab-search').style.display = tab === 'search' ? 'flex' : 'none';
+        document.getElementById('tab-settings').style.display = tab === 'settings' ? 'flex' : 'none';
+        if (tab === 'search') document.getElementById('search-input').focus();
+    }
+
+    async openNote(path) {
+        this.closeMobileDrawer();
+        if (this.currentFilePath === path) return;
+        if (this.isDirty) {
+            if (!confirm("Есть несохранённые изменения. Сохранить?")) this.isDirty = false;
+            else await this.saveCurrent();
+        }
+        try {
+            const content = await this.vault.readFile(path);
+            this.hideHome();
+            this.editor.value = content;
+            this.currentFilePath = path;
+            const name = path.split('/').pop();
+            this.fileNameEl.textContent = name;
+            document.title = `${name} — Graphite`;
+            this.isDirty = false;
+            this.setStatus('');
+            this.updateHighlight();
+            this.updatePreview();
+            this.updateStats();
+            this.recordRecent(path);
+            try { localStorage.setItem('graphite:lastOpened', path); } catch (e) {}
+            this.refreshTree();
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка чтения файла");
+        }
+    }
+
+    onEditorInput() {
+        this.isDirty = true;
+        this.setStatus("Изменено...", "dirty");
+        this.scheduleHighlightAndResize();
+        clearTimeout(this.renderTimeout);
+        this.renderTimeout = setTimeout(() => this.updatePreview(), 300);
+        this.updateStats();
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => this.saveCurrent(), 1500);
+    }
+
+    async saveCurrent() {
+        if (!this.currentFilePath || !this.isDirty) return;
+        const path = this.currentFilePath;
+        const content = this.editor.value;
+        this.setStatus("Сохранение...", "dirty");
+        try {
+            await this.vault.writeFile(path, content);
+            this.isDirty = false;
+            this.setStatus(this.vault.isSandbox ? 'Сохранено в песочнице' : 'Сохранено');
+        } catch (e) {
+            console.error(e);
+            this.setStatus("Ошибка сохранения", "error");
+        }
+    }
+
+    setStatus(text, cls = "") { this.fileStatusEl.textContent = text; this.fileStatusEl.className = cls; }
+
+    updatePreview() {
+        let html = marked.parse(this.editor.value);
+        html = html.replace(/<li>\s*\[\s\]\s*/g, '<li><input type="checkbox" disabled> ');
+        html = html.replace(/<li>\s*\[x\]\s*/gi, '<li><input type="checkbox" checked disabled> ');
+        this.preview.innerHTML = html;
+    }
+
+    updateStats() {
+        const text = this.editor.value;
+        const chars = text.length;
+        const words = (text.trim().match(/\S+/g) || []).length;
+        const minutes = words === 0 ? 0 : Math.max(1, Math.ceil(words / 200));
+        document.getElementById('stat-words').textContent = `${words} ${this.pluralize(words, ['слово', 'слова', 'слов'])}`;
+        document.getElementById('stat-chars').textContent = `${chars} ${this.pluralize(chars, ['символ', 'символа', 'символов'])}`;
+        document.getElementById('stat-read').textContent = minutes === 0 ? '—' : `~${minutes} мин чтения`;
+    }
+
+    refreshTree(query = "") {
+        if (!this.vault) return;
+        const treeContainer = this.currentTab === 'search' ? this.searchTreeEl : this.fileTreeEl;
+        treeContainer.innerHTML = '';
+        const root = { name: 'root', children: [], isDir: true };
+        const nodes = { "": root };
+        for (const path of Array.from(this.vault.files.keys()).sort()) {
+            const entry = this.vault.files.get(path);
+            if (query && !entry.isDir && !entry.name.toLowerCase().includes(query.toLowerCase())) continue;
+            const parts = path.split('/');
+            let currentParent = root, currentPath = "";
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                if (!nodes[currentPath]) {
+                    const entryForPath = this.vault.files.get(currentPath);
+                    const isDir = entryForPath ? entryForPath.isDir : (i < parts.length - 1);
+                    const node = { name: part, path: currentPath, isDir, children: [] };
+                    nodes[currentPath] = node;
+                    currentParent.children.push(node);
+                }
+                currentParent = nodes[currentPath];
+            }
+        }
+        treeContainer.appendChild(this.buildTreeDOM(root));
+        let count = 0;
+        for (const entry of this.vault.files.values()) if (!entry.isDir) count++;
+        this.noteCountEl.textContent = `${count} ${this.pluralize(count, ['заметка', 'заметки', 'заметок'])}`;
+        if (this.vault.isSandbox && this.sandboxBannerEl.style.display !== 'none' && !this.pendingReconnectHandle) this.updateSandboxBanner(true);
+        this.updateStorageStatus();
+    }
+
+    buildTreeDOM(node, depth = 0) {
+        const fragment = document.createDocumentFragment();
+        if (node.name !== 'root') {
+            const item = document.createElement('div');
+            item.className = 'tree-item ' + (node.isDir ? 'is-dir' : 'is-file');
+            if (this.currentFilePath === node.path) item.classList.add('selected');
+            item.style.paddingLeft = `${depth * 16 + 8}px`;
+            item.dataset.path = node.path;
+            const icon = document.createElement('span');
+            icon.className = 'tree-icon';
+            icon.textContent = node.isDir ? '📁' : '📄';
+            const label = document.createElement('span');
+            label.className = 'tree-label';
+            label.textContent = node.name;
+            item.appendChild(icon);
+            item.appendChild(label);
+            if (!node.isDir) {
+                const del = document.createElement('span');
+                del.className = 'tree-delete';
+                del.textContent = '✕';
+                del.title = 'Удалить заметку';
+                del.addEventListener('click', (e) => { e.stopPropagation(); this.deleteNote(node.path); });
+                item.appendChild(del);
+                item.addEventListener('click', () => this.openNote(node.path));
+            } else {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isExpanded = item.classList.toggle('expanded');
+                    if (isExpanded) this.expandedPaths.add(node.path);
+                    else this.expandedPaths.delete(node.path);
+                    const childrenContainer = item.nextElementSibling;
+                    if (childrenContainer) childrenContainer.style.display = isExpanded ? 'block' : 'none';
+                });
+                if (this.expandedPaths.has(node.path)) item.classList.add('expanded');
+            }
+            fragment.appendChild(item);
+        }
+        if (node.children.length > 0) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'tree-children';
+            if (node.name !== 'root' && !this.expandedPaths.has(node.path)) childrenContainer.style.display = 'none';
+            node.children.forEach(child => childrenContainer.appendChild(this.buildTreeDOM(child, depth + 1)));
+            fragment.appendChild(childrenContainer);
+        }
+        return fragment;
+    }
+
+    pluralize(n, forms) {
+        n = Math.abs(n);
+        const n10 = n % 10, n100 = n % 100;
+        if (n10 === 1 && n100 !== 11) return forms[0];
+        if (n10 >= 2 && n10 <= 4 && (n100 < 11 || n100 > 14)) return forms[1];
+        return forms[2];
+    }
+
+    resolveParentPath() {
+        const sel = document.querySelector('.tree-item.selected');
+        if (!sel) return null;
+        const path = sel.dataset.path;
+        const entry = this.vault.files.get(path);
+        if (entry && entry.isDir) return path;
+        return path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : null;
+    }
+
+    async createNote() {
+        if (!this.vault) return;
+        const name = prompt("Имя новой заметки:", "Новая заметка");
+        if (!name) return;
+        try {
+            const path = await this.vault.createNote(this.resolveParentPath(), name);
+            track('note_created', { sandbox: this.vault.isSandbox });
+            this.refreshTree();
+            this.openNote(path);
+        } catch (e) { console.error(e); alert("Ошибка создания заметки"); }
+    }
+
+    async createFolder() {
+        if (!this.vault) return;
+        const name = prompt("Имя новой папки:", "Новая папка");
+        if (!name) return;
+        try {
+            await this.vault.createFolder(this.resolveParentPath(), name);
+            this.refreshTree();
+        } catch (e) { console.error(e); alert("Ошибка создания папки"); }
+    }
+
+    async deleteNote(path) {
+        if (!confirm(`Удалить «${path.split('/').pop()}»?`)) return;
+        try {
+            await this.vault.deleteFile(path);
+            try {
+                let recent = JSON.parse(localStorage.getItem('graphite:recent') || '[]');
+                recent = recent.filter(p => p !== path);
+                localStorage.setItem('graphite:recent', JSON.stringify(recent));
+            } catch (e) {}
+            if (this.currentFilePath === path) {
+                try { localStorage.removeItem('graphite:lastOpened'); } catch (e) {}
+                this.refreshTree();
+                this.showHome();
+            } else {
+                this.refreshTree();
+            }
+        } catch (e) { console.error(e); alert('Ошибка удаления'); }
+    }
+
+    resetSandbox() {
+        if (!confirm('Очистить все заметки в песочнице? Действие нельзя отменить.')) return;
+        new SandboxVault().clear();
+        try { localStorage.removeItem('graphite:recent'); localStorage.removeItem('graphite:lastOpened'); } catch (e) {}
+        if (this.vault && this.vault.isSandbox) this.enterSandbox();
+        alert('Песочница очищена');
+    }
+
+    showFind() { document.getElementById('find-bar').style.display = 'flex'; document.getElementById('find-input').focus(); }
+    hideFind() { document.getElementById('find-bar').style.display = 'none'; }
+
+    findNext() { this._find(1); }
+    findPrev() { this._find(-1); }
+    _find(dir) {
+        const q = document.getElementById('find-input').value;
+        if (!q) return;
+        const t = this.editor.value.toLowerCase(), s = q.toLowerCase();
+        const start = dir > 0 ? this.editor.selectionEnd : this.editor.selectionStart - 1;
+        let i = dir > 0 ? t.indexOf(s, start) : t.lastIndexOf(s, start);
+        if (i === -1) i = dir > 0 ? t.indexOf(s) : t.lastIndexOf(s);
+        if (i !== -1) {
+            this.editor.selectionStart = i;
+            this.editor.selectionEnd = i + q.length;
+            this.editor.focus();
+        }
+    }
+
+    updateFindCount() {
+        const q = document.getElementById('find-input').value.toLowerCase();
+        if (!q) { document.getElementById('find-count').textContent = ""; return; }
+        const text = this.editor.value.toLowerCase();
+        let count = 0, pos = 0;
+        while ((pos = text.indexOf(q, pos)) !== -1) { count++; pos += q.length; }
+        document.getElementById('find-count').textContent = count > 0 ? `${count} совпадений` : "нет совпадений";
+    }
+
+    wrapSelection(mark) {
+        const start = this.editor.selectionStart, end = this.editor.selectionEnd;
+        const text = this.editor.value;
+        const selected = text.substring(start, end);
+        this.editor.value = text.substring(0, start) + mark + selected + mark + text.substring(end);
+        if (selected.length === 0) this.editor.selectionStart = this.editor.selectionEnd = start + mark.length;
+        else {
+            this.editor.selectionStart = start + mark.length;
+            this.editor.selectionEnd = end + mark.length;
+        }
+        this.editor.focus();
+        this.editor.dispatchEvent(new Event('input'));
+    }
+
+    toggleLinePrefix(prefix) {
+        const start = this.editor.selectionStart;
+        const text = this.editor.value;
+        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        let lineEnd = text.indexOf('\n', start);
+        if (lineEnd === -1) lineEnd = text.length;
+        const line = text.substring(lineStart, lineEnd);
+        const newLine = line.startsWith(prefix) ? line.substring(prefix.length) : prefix + line;
+        this.editor.value = text.substring(0, lineStart) + newLine + text.substring(lineEnd);
+        this.editor.selectionStart = this.editor.selectionEnd = lineStart + newLine.length;
+        this.editor.focus();
+        this.editor.dispatchEvent(new Event('input'));
+    }
+
+    insertLink() { this._insertWrap('text', '[', '](url)', 3); }
+    insertImage() { this._insertWrap('alt', '![', '](url)', 4); }
+    _insertWrap(def, pre, post, urlOffset) {
+        const s = this.editor.selectionStart, e = this.editor.selectionEnd;
+        const t = this.editor.value, sel = t.substring(s, e) || def;
+        this.editor.value = t.substring(0, s) + pre + sel + post + t.substring(e);
+        const u = s + sel.length + urlOffset;
+        this.editor.selectionStart = u;
+        this.editor.selectionEnd = u + 3;
+        this.editor.focus();
+        this.editor.dispatchEvent(new Event('input'));
+    }
+
+    loadSettings() {
+        const theme = localStorage.getItem('theme') || 'Graphite Dark';
+        this.applyTheme(theme);
+        document.getElementById('setting-theme').value = theme;
+        const fontSize = localStorage.getItem('fontSize') || '14';
+        document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
+        document.getElementById('setting-font-size').value = fontSize;
+        document.getElementById('font-size-val').textContent = `${fontSize}px`;
+    }
+
+    applyTheme(name) {
+        const themes = {
+            "Graphite Dark": { bg: "#1e1e1e", panel: "#252526", border: "#333", text: "#d4d4d4", muted: "#8a8a8a", accent: "#7aa2f7", hover: "#2a2a2a", selection: "#35405a", "code-bg": "#2d2d2d", error: "#f7768e" },
+            "Midnight": { bg: "#0f1419", panel: "#151b23", border: "#232c36", text: "#c0caf5", muted: "#565f89", accent: "#bb9af7", hover: "#1a2230", selection: "#283457", "code-bg": "#1a2230", error: "#f7768e" },
+            "Nord": { bg: "#2e3440", panel: "#3b4252", border: "#434c5e", text: "#d8dee9", muted: "#7b88a1", accent: "#88c0d0", hover: "#434c5e", selection: "#4c566a", "code-bg": "#3b4252", error: "#bf616a" },
+            "Sepia Light": { bg: "#fbf1c7", panel: "#f0e6d2", border: "#d5c4a1", text: "#3c3836", muted: "#7c6f64", accent: "#b58900", hover: "#eee8d5", selection: "#ebdbb2", "code-bg": "#f5e8c7", error: "#9d0006" }
+        };
+        const theme = themes[name] || themes["Graphite Dark"];
+        const root = document.documentElement;
+        for (const [key, value] of Object.entries(theme)) root.style.setProperty(`--${key}`, value);
+        localStorage.setItem('theme', name);
+    }
+}
+
+const app = new GraphiteApp();
+window.app = app;
+
+window.addEventListener('beforeunload', (e) => {
+    if (app.isDirty && app.currentFilePath) {
+        try { app.saveCurrent(); } catch (_) {}
+        if (!app.vault.isSandbox) { e.preventDefault(); e.returnValue = ''; }
+    }
+});
+</script>
 </body>
 </html>
